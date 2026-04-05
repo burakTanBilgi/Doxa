@@ -21,7 +21,7 @@ function AppContent() {
       });
 
       const link = document.createElement('a');
-      link.download = `character-profile-${Date.now()}.png`;
+      link.download = `doxa-profile-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
     } catch (error) {
@@ -41,8 +41,8 @@ function AppContent() {
               <User size={24} className="text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Character Profiler</h1>
-              <p className="text-sm text-slate-400">Psychological & Social Analysis</p>
+              <h1 className="text-xl font-bold text-white">Doxa</h1>
+              <p className="text-sm text-slate-400">Character Profiling System</p>
             </div>
           </div>
           <button
@@ -81,7 +81,7 @@ function AppContent() {
 
       <footer className="border-t border-slate-800 mt-8">
         <div className="max-w-7xl mx-auto px-4 py-4 text-center text-slate-500 text-sm">
-          Character Profiler — Dynamic Radar Chart Visualization
+          Doxa — Psychological & Social Character Profiling
         </div>
       </footer>
     </div>
