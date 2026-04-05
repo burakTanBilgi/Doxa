@@ -4,7 +4,7 @@ const initialCharts = [
   {
     id: 1,
     title: "Core Layer: Big Five",
-    color: "#3b82f6",
+    color: "#c73a3a",
     data: [
       { subject: "Openness", value: 70, fullMark: 100 },
       { subject: "Conscientiousness", value: 85, fullMark: 100 },
@@ -16,7 +16,7 @@ const initialCharts = [
   {
     id: 2,
     title: "Presentation Layer: Social Dynamics",
-    color: "#ef4444",
+    color: "#b8b8b8",
     data: [
       { subject: "Chaos Potential", value: 80, fullMark: 100 },
       { subject: "Manipulation", value: 65, fullMark: 100 },
@@ -87,7 +87,7 @@ export function ChartProvider({ children }) {
 
   const addNewChart = () => {
     const newId = Math.max(...charts.map(c => c.id), 0) + 1;
-    const colors = ['#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+    const colors = ['#c73a3a', '#b8b8b8', '#e05555', '#d0d0d0', '#a82e2e', '#888888'];
     const newChart = {
       id: newId,
       title: `New Chart ${newId}`,
@@ -113,6 +113,43 @@ export function ChartProvider({ children }) {
     );
   };
 
+  const updateTraitName = (chartId, traitIndex, newName) => {
+    if (!newName.trim()) return;
+    setCharts(prevCharts =>
+      prevCharts.map(chart =>
+        chart.id === chartId
+          ? {
+              ...chart,
+              data: chart.data.map((trait, idx) =>
+                idx === traitIndex ? { ...trait, subject: newName.trim() } : trait
+              )
+            }
+          : chart
+      )
+    );
+  };
+
+  const reorderCharts = (fromIndex, toIndex) => {
+    setCharts(prevCharts => {
+      const result = [...prevCharts];
+      const [removed] = result.splice(fromIndex, 1);
+      result.splice(toIndex, 0, removed);
+      return result;
+    });
+  };
+
+  const reorderTraits = (chartId, fromIndex, toIndex) => {
+    setCharts(prevCharts =>
+      prevCharts.map(chart => {
+        if (chart.id !== chartId) return chart;
+        const newData = [...chart.data];
+        const [removed] = newData.splice(fromIndex, 1);
+        newData.splice(toIndex, 0, removed);
+        return { ...chart, data: newData };
+      })
+    );
+  };
+
   return (
     <ChartContext.Provider
       value={{
@@ -123,7 +160,10 @@ export function ChartProvider({ children }) {
         removeTrait,
         addNewChart,
         removeChart,
-        updateChartTitle
+        updateChartTitle,
+        updateTraitName,
+        reorderCharts,
+        reorderTraits
       }}
     >
       {children}

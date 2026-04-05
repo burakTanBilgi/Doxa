@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --red: #c73a3a;
+  --red-light: #e05555;
+  --red-dark: #a82e2e;
+  --charcoal: #2d2d2d;
+  --charcoal-dark: #1a1a1a;
+  --charcoal-light: #3d3d3d;
+  --silver: #b8b8b8;
+  --silver-dark: #888888;
+  --silver-light: #d0d0d0;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -12,4 +24,252 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--charcoal-dark);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--silver-dark);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--silver);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #888888 transparent;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-slideIn {
+  animation: slideIn 0.4s ease-out forwards;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.3s ease-out forwards;
+}
+
+/* Smooth scroll behavior */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* Interactive hover effects */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Delete animations */
+@keyframes deleteOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    max-height: 80px;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-20px) scale(0.95);
+    max-height: 0;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+@keyframes deletePanel {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.98) translateX(-10px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95) translateX(-30px);
+    max-height: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+  }
+}
+
+.animate-deleteOut {
+  animation: deleteOut 0.3s ease-out forwards;
+}
+
+.animate-deletePanel {
+  animation: deletePanel 0.4s ease-out forwards;
+}
+
+/* Logo linked hover effect */
+.logo-group {
+  position: relative;
+}
+
+.logo-main,
+.logo-canvas {
+  transition: all 0.3s ease;
+}
+
+.logo-group:hover .logo-main {
+  filter: drop-shadow(0 0 8px rgba(199, 58, 58, 0.6));
+}
+
+.logo-main:hover ~ .logo-canvas-trigger .logo-canvas,
+.logo-group.main-hovered .logo-canvas {
+  filter: drop-shadow(0 4px 12px rgba(199, 58, 58, 0.5));
+  transform: translateY(-2px);
+}
+
+.logo-canvas:hover ~ .logo-main-trigger .logo-main,
+.logo-group.canvas-hovered .logo-main {
+  filter: drop-shadow(0 4px 12px rgba(199, 58, 58, 0.5));
+  transform: translateY(-2px);
+}
+
+/* Interactive text - page-wide glow effect on hover */
+.interactive-text {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.interactive-text:hover {
+  text-shadow: 0 0 8px currentColor;
+}
+
+/* When interactive text is hovered, add subtle page glow */
+body:has(.interactive-text:hover) {
+  background: radial-gradient(ellipse at var(--mouse-x, 50%) var(--mouse-y, 50%), 
+    rgba(199, 58, 58, 0.03) 0%, 
+    transparent 50%);
+}
+
+/* Button hover/press effects */
+button {
+  position: relative;
+  overflow: hidden;
+}
+
+button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.2) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+button:hover::after {
+  opacity: 1;
+}
+
+button:active::after {
+  opacity: 0.5;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.3) 0%, transparent 50%);
+}
+
+/* Input field effects */
+input[type="text"],
+input[type="color"] {
+  transition: all 0.2s ease;
+}
+
+input[type="text"]:hover {
+  transform: translateY(-1px);
+}
+
+input[type="text"]:focus {
+  transform: translateY(-1px);
+}
+
+/* Range slider thumb styling */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #d0d0d0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(1.1);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #d0d0d0;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.2);
 }
