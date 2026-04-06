@@ -18,8 +18,37 @@ function AppContent() {
   const [analysisDescription, setAnalysisDescription] = useState('Character Profile Analysis');
   const [mainHovered, setMainHovered] = useState(false);
   const [canvasHovered, setCanvasHovered] = useState(false);
+  const [scrollSyncEnabled, setScrollSyncEnabled] = useState(true);
+  const [bothAtTop, setBothAtTop] = useState(true);
+
+  // Check if both panels are at top
+  useEffect(() => {
+    const checkAtTop = () => {
+      const left = leftPanelRef.current;
+      const right = rightPanelRef.current;
+      if (!left || !right) return;
+      
+      const atTop = left.scrollTop < 5 && right.scrollTop < 5;
+      setBothAtTop(atTop);
+    };
+
+    const left = leftPanelRef.current;
+    const right = rightPanelRef.current;
+    if (left && right) {
+      left.addEventListener('scroll', checkAtTop, { passive: true });
+      right.addEventListener('scroll', checkAtTop, { passive: true });
+      checkAtTop();
+    }
+
+    return () => {
+      if (left) left.removeEventListener('scroll', checkAtTop);
+      if (right) right.removeEventListener('scroll', checkAtTop);
+    };
+  }, []);
 
   useEffect(() => {
+    if (!scrollSyncEnabled) return;
+    
     const left = leftPanelRef.current;
     const right = rightPanelRef.current;
     if (!left || !right) return;
@@ -77,7 +106,13 @@ function AppContent() {
       left.removeEventListener('scroll', syncFromLeft);
       right.removeEventListener('scroll', syncFromRight);
     };
-  }, []);
+  }, [scrollSyncEnabled]);
+  
+  const toggleScrollSync = () => {
+    if (bothAtTop) {
+      setScrollSyncEnabled(!scrollSyncEnabled);
+    }
+  };
 
   const handleExport = async () => {
     if (!canvasRef.current) return;
@@ -116,7 +151,7 @@ function AppContent() {
             {/* Branding */}
             <div className="flex items-center gap-3 flex-shrink-0">
               <img 
-                src="/logo.png" 
+                src="/Doxa2.png" 
                 alt="Doxa" 
                 className="h-8 w-auto rounded-lg logo-main transition-all duration-300"
                 style={{
@@ -134,7 +169,13 @@ function AppContent() {
               className="rounded-xl p-4 flex flex-col flex-shrink-0"
               style={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', contain: 'layout style' }}
             >
-              <MemoizedControlPanel onExport={handleExport} isExporting={isExporting} />
+              <MemoizedControlPanel 
+                onExport={handleExport} 
+                isExporting={isExporting}
+                scrollSyncEnabled={scrollSyncEnabled}
+                onToggleScrollSync={toggleScrollSync}
+                canToggleSync={bothAtTop}
+              />
             </div>
           </aside>
 

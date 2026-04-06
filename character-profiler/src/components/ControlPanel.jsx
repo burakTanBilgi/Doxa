@@ -1,45 +1,70 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useCharts } from '../context/ChartContext';
-import { Plus, Trash2, X, ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
+import { Plus, Trash2, X, ChevronDown, ChevronUp, GripVertical, Lock, Unlock } from 'lucide-react';
 
-// Auto-scroll when dragging near edges
-function useAutoScroll(containerRef, isDragging) {
-  const scrollSpeed = 8;
-  const edgeThreshold = 60;
+// Auto-scroll when dragging near edges - finds scrollable parent automatically
+function useAutoScroll(isDragging) {
+  const scrollSpeed = 12;
+  const edgeThreshold = 80;
   const animationRef = useRef(null);
+  const lastY = useRef(0);
 
   useEffect(() => {
-    if (!isDragging || !containerRef.current) return;
-
-    const handleDragMove = (e) => {
-      const container = containerRef.current;
-      if (!container) return;
-
-      const rect = container.getBoundingClientRect();
-      const y = e.clientY;
-
-      // Cancel any existing animation
+    if (!isDragging) {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
       }
+      return;
+    }
 
-      const scroll = () => {
-        if (!container) return;
-        
-        if (y < rect.top + edgeThreshold) {
-          // Near top - scroll up
-          const intensity = 1 - (y - rect.top) / edgeThreshold;
-          container.scrollTop -= scrollSpeed * Math.max(0.2, intensity);
-          animationRef.current = requestAnimationFrame(scroll);
-        } else if (y > rect.bottom - edgeThreshold) {
-          // Near bottom - scroll down
-          const intensity = 1 - (rect.bottom - y) / edgeThreshold;
-          container.scrollTop += scrollSpeed * Math.max(0.2, intensity);
-          animationRef.current = requestAnimationFrame(scroll);
+    const findScrollableParent = (element) => {
+      while (element && element !== document.body) {
+        const style = window.getComputedStyle(element);
+        if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+          return element;
         }
-      };
+        element = element.parentElement;
+      }
+      return null;
+    };
 
-      scroll();
+    const handleDragMove = (e) => {
+      lastY.current = e.clientY;
+      
+      // Find all scrollable containers and check if we're near their edges
+      const scrollContainers = document.querySelectorAll('[class*="overflow-y-auto"], [class*="overflow-auto"]');
+      
+      scrollContainers.forEach(container => {
+        const rect = container.getBoundingClientRect();
+        const y = e.clientY;
+        
+        // Check if mouse is within this container's horizontal bounds
+        if (e.clientX < rect.left || e.clientX > rect.right) return;
+        
+        // Cancel existing animation for this container
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current);
+        }
+
+        const scroll = () => {
+          const currentY = lastY.current;
+          
+          if (currentY < rect.top + edgeThreshold && currentY > rect.top - 20) {
+            // Near top - scroll up
+            const intensity = Math.max(0.3, 1 - (currentY - rect.top) / edgeThreshold);
+            container.scrollTop -= scrollSpeed * intensity;
+            animationRef.current = requestAnimationFrame(scroll);
+          } else if (currentY > rect.bottom - edgeThreshold && currentY < rect.bottom + 20) {
+            // Near bottom - scroll down  
+            const intensity = Math.max(0.3, 1 - (rect.bottom - currentY) / edgeThreshold);
+            container.scrollTop += scrollSpeed * intensity;
+            animationRef.current = requestAnimationFrame(scroll);
+          }
+        };
+
+        scroll();
+      });
     };
 
     document.addEventListener('dragover', handleDragMove);
@@ -49,7 +74,7 @@ function useAutoScroll(containerRef, isDragging) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isDragging, containerRef]);
+  }, [isDragging]);
 }
 
 function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDragging, dragOverIndex, onCrossChartDrop }) {
@@ -238,6 +263,18 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
+    
+    // Check if this is from another chart (cross-chart transfer)
+    try {
+      const types = e.dataTransfer.types;
+      if (types.includes('application/json')) {
+        // This could be a cross-chart transfer, show drop indicator
+        setDragOverIndex(overIndex);
+      }
+    } catch (err) {
+      // Fallback
+    }
+    
     setDragOverIndex(overIndex);
   };
 
@@ -465,15 +502,13 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
   );
 }
 
-export default function ControlPanel({ onExport, isExporting }) {
+export default function ControlPanel({ onExport, isExporting, scrollSyncEnabled, onToggleScrollSync, canToggleSync }) {
   const { charts, addNewChart, reorderCharts } = useCharts();
   const [draggedChartIndex, setDraggedChartIndex] = useState(null);
   const [dropTargetIndex, setDropTargetIndex] = useState(null);
   const [dropPosition, setDropPosition] = useState(null); // 'before' | 'after' | 'on'
-  const scrollContainerRef = useRef(null);
-  
   // Enable auto-scroll when dragging
-  useAutoScroll(scrollContainerRef, draggedChartIndex !== null);
+  useAutoScroll(draggedChartIndex !== null);
 
   const handleChartDragStart = (e, index) => {
     setDraggedChartIndex(index);
@@ -556,22 +591,46 @@ export default function ControlPanel({ onExport, isExporting }) {
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: '#888888' }}>Control Panel</h2>
-        {onExport && (
+        <div className="flex items-center gap-2">
+          {/* Scroll Sync Toggle - only visible when both panels at top */}
           <button
-            onClick={onExport}
-            disabled={isExporting}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
+            onClick={onToggleScrollSync}
+            disabled={!canToggleSync}
+            className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-300 ${
+              canToggleSync 
+                ? 'opacity-100 translate-y-0' 
+                : 'opacity-0 translate-y-2 pointer-events-none'
+            }`}
             style={{ 
-              backgroundColor: isExporting ? '#3d3d3d' : '#c73a3a',
-              color: isExporting ? '#888888' : '#ffffff'
+              backgroundColor: '#1a1a1a',
+              color: scrollSyncEnabled ? '#c73a3a' : '#666666'
             }}
+            title={scrollSyncEnabled ? 'Scroll sync ON (click to unlock)' : 'Scroll sync OFF (click to lock)'}
           >
-            {isExporting ? 'Saving...' : 'Export'}
+            {scrollSyncEnabled ? (
+              <Lock size={14} />
+            ) : (
+              <Unlock size={14} />
+            )}
           </button>
-        )}
+          
+          {onExport && (
+            <button
+              onClick={onExport}
+              disabled={isExporting}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
+              style={{ 
+                backgroundColor: isExporting ? '#3d3d3d' : '#c73a3a',
+                color: isExporting ? '#888888' : '#ffffff'
+              }}
+            >
+              {isExporting ? 'Saving...' : 'Export'}
+            </button>
+          )}
+        </div>
       </div>
 
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pr-1">
+      <div className="flex-1 overflow-y-auto pr-1">
         {/* Top drop zone */}
         {draggedChartIndex !== null && draggedChartIndex !== 0 && (
           <div

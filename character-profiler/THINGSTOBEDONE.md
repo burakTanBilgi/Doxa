@@ -5,13 +5,17 @@
 
 - [x] I can't scroll the bars on the control panel when i try to do that i am just dragging the whole field/trait.
 
-- [DO AGAIN] when dragging a chart or field for dragging it should be easier to scroll up or down. Holding the mouse button and just moving the mouse up or down should scroll the panel. in an easy wayz
+- [x] when dragging a chart or field for dragging it should be easier to scroll up or down. Holding the mouse button and just moving the mouse up or down should scroll the panel. in an easy wayz
 
 
 - [x] The charts and the control panels on the left should have better drag/order logic. If a chart is dragged over another chart, it should swap positions. There should be a visual indicator of where the chart will be dropped. also the gaps should be draggable as well.
 
 
-- [DO AGAIN] The fields across charts should be swappable or could be transferred from one chart to another.
+- [x] The fields across charts should be swappable or could be transferred from one chart to another.
+
+- [x] The asymetrical scrolling should be able to be toggled on and off. it should be on by default. The only way to toggle it must be if both the scrolls are at the very top of the page. It should be a button that only appears (little animations) next to the Export button. it should be black as the one in the logo. It should be a toggle button that shows a icon of a lcok and two vertical lines (like a lock) when it's on and a unlock icon when it's off. 
+
+- [x] Change the new logo to Doxa2.png
 
 ## DO LAST (HARD)
 
