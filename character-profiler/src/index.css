@@ -273,3 +273,67 @@ input[type="range"]::-moz-range-thumb {
 input[type="range"]::-moz-range-thumb:hover {
   transform: scale(1.2);
 }
+
+/* Drag and drop styling */
+.dragging {
+  opacity: 0.5;
+  transform: scale(0.98);
+}
+
+[draggable]:active {
+  cursor: grabbing;
+}
+
+/* Drop zone highlight */
+.drop-target {
+  background: rgba(199, 58, 58, 0.1);
+  border-color: #c73a3a !important;
+}
+
+/* Subtle pulse animation for Add Chart button */
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+    border-color: #555555;
+  }
+  50% {
+    opacity: 0.85;
+    border-color: #666666;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s ease-in-out infinite;
+}
+
+.animate-pulse-subtle:hover {
+  animation: none;
+  border-color: #c73a3a !important;
+  background-color: #c73a3a20 !important;
+}
+
+/* Asymmetric scroll panels */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+aside::-webkit-scrollbar,
+section::-webkit-scrollbar {
+  width: 6px;
+}
+
+aside::-webkit-scrollbar-track,
+section::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+aside::-webkit-scrollbar-thumb,
+section::-webkit-scrollbar-thumb {
+  background: #3d3d3d;
+  border-radius: 3px;
+}
+
+aside::-webkit-scrollbar-thumb:hover,
+section::-webkit-scrollbar-thumb:hover {
+  background: #4d4d4d;
+}

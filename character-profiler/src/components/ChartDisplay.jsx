@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   RadarChart,
   PolarGrid,
@@ -14,13 +15,51 @@ import {
   Cell,
   LabelList
 } from 'recharts';
+import { useCharts } from '../context/ChartContext';
 
-function TwoFieldChart({ chart }) {
+function TwoFieldChart({ chart, onEditField }) {
   const scatterData = [{
     x: chart.data[0]?.value || 0,
     y: chart.data[1]?.value || 0,
     name: chart.title
   }];
+
+  const CustomXLabel = (props) => {
+    const { viewBox } = props;
+    return (
+      <text
+        x={viewBox.x + viewBox.width / 2}
+        y={viewBox.y + viewBox.height + 25}
+        textAnchor="middle"
+        fill="#b8b8b8"
+        fontSize={11}
+        style={{ cursor: 'pointer' }}
+        onClick={() => onEditField(0)}
+        className="hover:fill-white"
+      >
+        {chart.data[0]?.subject || 'X'}
+      </text>
+    );
+  };
+
+  const CustomYLabel = (props) => {
+    const { viewBox } = props;
+    return (
+      <text
+        x={viewBox.x - 25}
+        y={viewBox.y + viewBox.height / 2}
+        textAnchor="middle"
+        fill="#b8b8b8"
+        fontSize={11}
+        transform={`rotate(-90, ${viewBox.x - 25}, ${viewBox.y + viewBox.height / 2})`}
+        style={{ cursor: 'pointer' }}
+        onClick={() => onEditField(1)}
+        className="hover:fill-white"
+      >
+        {chart.data[1]?.subject || 'Y'}
+      </text>
+    );
+  };
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -33,12 +72,7 @@ function TwoFieldChart({ chart }) {
           name={chart.data[0]?.subject || 'X'}
           tick={{ fill: '#b8b8b8', fontSize: 10 }}
           axisLine={{ stroke: '#4d4d4d' }}
-          label={{ 
-            value: chart.data[0]?.subject || 'X', 
-            position: 'bottom', 
-            fill: '#b8b8b8',
-            fontSize: 11
-          }}
+          label={<CustomXLabel />}
         />
         <YAxis 
           type="number" 
@@ -47,13 +81,7 @@ function TwoFieldChart({ chart }) {
           name={chart.data[1]?.subject || 'Y'}
           tick={{ fill: '#b8b8b8', fontSize: 10 }}
           axisLine={{ stroke: '#4d4d4d' }}
-          label={{ 
-            value: chart.data[1]?.subject || 'Y', 
-            angle: -90, 
-            position: 'insideLeft', 
-            fill: '#b8b8b8',
-            fontSize: 11
-          }}
+          label={<CustomYLabel />}
         />
         <Tooltip
           contentStyle={{
@@ -81,9 +109,27 @@ function TwoFieldChart({ chart }) {
   );
 }
 
-function RadarChartDisplay({ chart, traitCount }) {
+function RadarChartDisplay({ chart, traitCount, onLabelClick }) {
   const outerRadius = traitCount >= 10 ? '45%' : traitCount >= 7 ? '50%' : '65%';
   const fontSize = traitCount >= 10 ? 7 : traitCount >= 7 ? 8 : 10;
+
+  const CustomTick = ({ payload, x, y, textAnchor }) => {
+    const index = chart.data.findIndex(d => d.subject === payload.value);
+    return (
+      <text
+        x={x}
+        y={y}
+        textAnchor={textAnchor}
+        fill="#b8b8b8"
+        fontSize={fontSize}
+        style={{ cursor: 'pointer' }}
+        onClick={() => onLabelClick(index)}
+        className="hover:fill-white transition-colors"
+      >
+        {payload.value}
+      </text>
+    );
+  };
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -91,7 +137,7 @@ function RadarChartDisplay({ chart, traitCount }) {
         <PolarGrid stroke="#4d4d4d" />
         <PolarAngleAxis
           dataKey="subject"
-          tick={{ fill: '#b8b8b8', fontSize }}
+          tick={<CustomTick />}
           tickLine={false}
         />
         <PolarRadiusAxis
@@ -126,7 +172,32 @@ function RadarChartDisplay({ chart, traitCount }) {
 }
 
 export default function ChartDisplay({ chart, index = 0 }) {
+  const { updateChartTitle, updateTraitName } = useCharts();
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState(chart.title);
+  const [editingFieldIndex, setEditingFieldIndex] = useState(null);
+  const [fieldInput, setFieldInput] = useState('');
   const traitCount = chart.data.length;
+
+  const handleTitleSave = () => {
+    if (titleInput.trim()) {
+      updateChartTitle(chart.id, titleInput.trim());
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleFieldEdit = (idx) => {
+    setEditingFieldIndex(idx);
+    setFieldInput(chart.data[idx].subject);
+  };
+
+  const handleFieldSave = () => {
+    if (fieldInput.trim() && editingFieldIndex !== null) {
+      updateTraitName(chart.id, editingFieldIndex, fieldInput.trim());
+    }
+    setEditingFieldIndex(null);
+    setFieldInput('');
+  };
 
   return (
     <div 
@@ -137,17 +208,53 @@ export default function ChartDisplay({ chart, index = 0 }) {
         animationDelay: `${index * 100}ms`
       }}
     >
-      <h3 
-        className="text-base font-semibold mb-3 text-center transition-colors"
-        style={{ color: '#d0d0d0' }}
-      >
-        {chart.title}
-      </h3>
+      {isEditingTitle ? (
+        <input
+          type="text"
+          value={titleInput}
+          onChange={(e) => setTitleInput(e.target.value)}
+          onBlur={handleTitleSave}
+          onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
+          className="text-base font-semibold mb-3 text-center w-full bg-transparent border-b-2 focus:outline-none"
+          style={{ color: '#d0d0d0', borderColor: chart.color }}
+          autoFocus
+        />
+      ) : (
+        <h3 
+          className="text-base font-semibold mb-3 text-center transition-all cursor-pointer hover:scale-105"
+          style={{ color: '#d0d0d0' }}
+          onClick={() => {
+            setTitleInput(chart.title);
+            setIsEditingTitle(true);
+          }}
+          title="Click to edit"
+        >
+          {chart.title}
+        </h3>
+      )}
+
+      {/* Edit field overlay */}
+      {editingFieldIndex !== null && (
+        <div className="flex justify-center mb-2">
+          <input
+            type="text"
+            value={fieldInput}
+            onChange={(e) => setFieldInput(e.target.value)}
+            onBlur={handleFieldSave}
+            onKeyDown={(e) => e.key === 'Enter' && handleFieldSave()}
+            className="text-sm px-3 py-1.5 rounded-lg bg-transparent border-2 focus:outline-none text-center"
+            style={{ color: chart.color, borderColor: chart.color, minWidth: '120px' }}
+            autoFocus
+            placeholder="Field name..."
+          />
+        </div>
+      )}
+
       <div className="w-full h-[280px]">
         {traitCount === 2 ? (
-          <TwoFieldChart chart={chart} />
+          <TwoFieldChart chart={chart} onEditField={handleFieldEdit} />
         ) : (
-          <RadarChartDisplay chart={chart} traitCount={traitCount} />
+          <RadarChartDisplay chart={chart} traitCount={traitCount} onLabelClick={handleFieldEdit} />
         )}
       </div>
     </div>

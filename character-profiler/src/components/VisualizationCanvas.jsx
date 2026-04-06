@@ -1,7 +1,6 @@
 import { forwardRef, useState } from 'react';
 import { useCharts } from '../context/ChartContext';
 import ChartDisplay from './ChartDisplay';
-import { Camera, Loader2 } from 'lucide-react';
 
 const VisualizationCanvas = forwardRef(function VisualizationCanvas({ 
   analysisTitle, 
@@ -9,9 +8,7 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
   analysisDescription, 
   setAnalysisDescription,
   mainHovered, 
-  onCanvasLogoHover,
-  onExport,
-  isExporting
+  onCanvasLogoHover
 }, ref) {
   const { charts } = useCharts();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -91,36 +88,18 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
             </p>
           )}
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onExport}
-            disabled={isExporting}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
-            style={{ 
-              backgroundColor: isExporting ? '#3d3d3d' : '#c73a3a',
-              color: isExporting ? '#888888' : '#ffffff'
-            }}
-          >
-            {isExporting ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Camera size={14} />
-            )}
-            {isExporting ? 'Saving...' : 'Export'}
-          </button>
-          <img 
-            src="/logo.png" 
-            alt="Doxa" 
-            className="h-8 w-auto rounded-lg logo-canvas transition-all duration-300"
-            style={{
-              opacity: mainHovered ? 0.9 : 0.7,
-              filter: mainHovered ? 'drop-shadow(0 4px 12px rgba(199, 58, 58, 0.6))' : 'none',
-              transform: mainHovered ? 'translateY(-2px)' : 'none'
-            }}
-            onMouseEnter={() => onCanvasLogoHover?.(true)}
-            onMouseLeave={() => onCanvasLogoHover?.(false)}
-          />
-        </div>
+        <img 
+          src="/logo.png" 
+          alt="Doxa" 
+          className="h-8 w-auto rounded-lg logo-canvas transition-all duration-300"
+          style={{
+            opacity: mainHovered ? 0.9 : 0.7,
+            filter: mainHovered ? 'drop-shadow(0 4px 12px rgba(199, 58, 58, 0.6))' : 'none',
+            transform: mainHovered ? 'translateY(-2px)' : 'none'
+          }}
+          onMouseEnter={() => onCanvasLogoHover?.(true)}
+          onMouseLeave={() => onCanvasLogoHover?.(false)}
+        />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {charts.map((chart, index) => (
