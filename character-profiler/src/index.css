@@ -313,8 +313,10 @@ input[type="range"]::-moz-range-thumb:hover {
 }
 
 /* Asymmetric scroll panels */
-.scroll-smooth {
-  scroll-behavior: smooth;
+aside,
+section {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 aside::-webkit-scrollbar,
@@ -336,4 +338,23 @@ section::-webkit-scrollbar-thumb {
 aside::-webkit-scrollbar-thumb:hover,
 section::-webkit-scrollbar-thumb:hover {
   background: #4d4d4d;
+}
+
+/* GPU acceleration for animations */
+.animate-scaleIn,
+.animate-slideIn,
+.animate-fadeIn {
+  will-change: transform, opacity;
+}
+
+/* Reduce repaints on hover states */
+[class*="hover:scale"],
+[class*="transition"] {
+  backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+}
+
+/* Optimize chart containers */
+.recharts-wrapper {
+  contain: layout style paint;
 }

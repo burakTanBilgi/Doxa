@@ -1,52 +1,80 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, memo } from 'react';
 import { toPng } from 'html-to-image';
 import { ChartProvider } from './context/ChartContext';
 import ControlPanel from './components/ControlPanel';
 import VisualizationCanvas from './components/VisualizationCanvas';
 
+// Memoized components to prevent unnecessary re-renders
+const MemoizedControlPanel = memo(ControlPanel);
+const MemoizedVisualizationCanvas = memo(VisualizationCanvas);
+
 function AppContent() {
   const canvasRef = useRef(null);
   const leftPanelRef = useRef(null);
   const rightPanelRef = useRef(null);
-  const isScrollingRef = useRef(false);
+  const isProgrammaticScroll = useRef(false);
+  const lastUserScrollTime = useRef({ left: 0, right: 0 });
   const [isExporting, setIsExporting] = useState(false);
   const [analysisTitle, setAnalysisTitle] = useState('Untitled Analysis');
   const [analysisDescription, setAnalysisDescription] = useState('Character Profile Analysis');
   const [mainHovered, setMainHovered] = useState(false);
   const [canvasHovered, setCanvasHovered] = useState(false);
 
-  // Asymmetric scroll ratio: right panel scrolls faster than left
+  // Asymmetric scroll ratio
   const SCROLL_RATIO = 0.6;
+  const SCROLL_COOLDOWN = 100; // ms to ignore programmatic scroll triggers
 
   const handleLeftScroll = useCallback(() => {
-    if (isScrollingRef.current) return;
+    if (isProgrammaticScroll.current) return;
+    
+    const now = Date.now();
+    // Ignore if right panel was just scrolled by user
+    if (now - lastUserScrollTime.current.right < SCROLL_COOLDOWN) return;
+    
     const left = leftPanelRef.current;
     const right = rightPanelRef.current;
     if (!left || !right) return;
 
-    isScrollingRef.current = true;
-    const leftScrollPercent = left.scrollTop / (left.scrollHeight - left.clientHeight || 1);
+    const leftMaxScroll = left.scrollHeight - left.clientHeight;
     const rightMaxScroll = right.scrollHeight - right.clientHeight;
-    right.scrollTop = leftScrollPercent * rightMaxScroll * (1 / SCROLL_RATIO);
+    if (leftMaxScroll <= 0 || rightMaxScroll <= 0) return;
+
+    lastUserScrollTime.current.left = now;
     
+    const leftScrollPercent = left.scrollTop / leftMaxScroll;
+    const targetRight = Math.min(leftScrollPercent * rightMaxScroll * (1 / SCROLL_RATIO), rightMaxScroll);
+    
+    isProgrammaticScroll.current = true;
+    right.scrollTop = targetRight;
     requestAnimationFrame(() => {
-      isScrollingRef.current = false;
+      isProgrammaticScroll.current = false;
     });
   }, []);
 
   const handleRightScroll = useCallback(() => {
-    if (isScrollingRef.current) return;
+    if (isProgrammaticScroll.current) return;
+    
+    const now = Date.now();
+    // Ignore if left panel was just scrolled by user
+    if (now - lastUserScrollTime.current.left < SCROLL_COOLDOWN) return;
+    
     const left = leftPanelRef.current;
     const right = rightPanelRef.current;
     if (!left || !right) return;
 
-    isScrollingRef.current = true;
-    const rightScrollPercent = right.scrollTop / (right.scrollHeight - right.clientHeight || 1);
     const leftMaxScroll = left.scrollHeight - left.clientHeight;
-    left.scrollTop = rightScrollPercent * leftMaxScroll * SCROLL_RATIO;
+    const rightMaxScroll = right.scrollHeight - right.clientHeight;
+    if (rightMaxScroll <= 0 || leftMaxScroll <= 0) return;
+
+    lastUserScrollTime.current.right = now;
     
+    const rightScrollPercent = right.scrollTop / rightMaxScroll;
+    const targetLeft = Math.min(rightScrollPercent * leftMaxScroll * SCROLL_RATIO, leftMaxScroll);
+    
+    isProgrammaticScroll.current = true;
+    left.scrollTop = targetLeft;
     requestAnimationFrame(() => {
-      isScrollingRef.current = false;
+      isProgrammaticScroll.current = false;
     });
   }, []);
 
@@ -95,8 +123,8 @@ function AppContent() {
           {/* Left Panel - Controls */}
           <aside 
             ref={leftPanelRef}
-            className="xl:col-span-4 flex flex-col gap-4 overflow-y-auto scroll-smooth pr-2"
-            style={{ scrollbarGutter: 'stable' }}
+            className="xl:col-span-4 flex flex-col gap-4 overflow-y-auto pr-2"
+            style={{ scrollbarGutter: 'stable', willChange: 'scroll-position' }}
           >
             {/* Branding */}
             <div className="flex items-center gap-3 flex-shrink-0">
@@ -117,16 +145,17 @@ function AppContent() {
             {/* Control Panel */}
             <div 
               className="rounded-xl p-4 flex flex-col flex-shrink-0"
-              style={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d' }}
+              style={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', contain: 'layout style' }}
             >
-              <ControlPanel onExport={handleExport} isExporting={isExporting} />
+              <MemoizedControlPanel onExport={handleExport} isExporting={isExporting} />
             </div>
           </aside>
 
           {/* Right Panel - Visualization */}
           <section 
             ref={rightPanelRef}
-            className="xl:col-span-8 relative overflow-y-auto scroll-smooth"
+            className="xl:col-span-8 relative overflow-y-auto"
+            style={{ willChange: 'scroll-position' }}
           >
             {/* View Panel label - excluded from screenshot */}
             <div 
@@ -136,7 +165,7 @@ function AppContent() {
             >
               View Panel
             </div>
-            <VisualizationCanvas 
+            <MemoizedVisualizationCanvas 
               ref={canvasRef} 
               analysisTitle={analysisTitle}
               setAnalysisTitle={setAnalysisTitle}
