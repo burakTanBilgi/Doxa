@@ -69,8 +69,9 @@ function TwoFieldChart({ chart, onEditField }) {
           type="number" 
           dataKey="x" 
           domain={[0, 100]} 
+          ticks={[0, 25, 50, 75, 100]}
           name={chart.data[0]?.subject || 'X'}
-          tick={{ fill: '#b8b8b8', fontSize: 10 }}
+          tick={{ fill: '#888', fontSize: 9 }}
           axisLine={{ stroke: '#4d4d4d' }}
           label={<CustomXLabel />}
         />
@@ -78,8 +79,9 @@ function TwoFieldChart({ chart, onEditField }) {
           type="number" 
           dataKey="y" 
           domain={[0, 100]} 
+          ticks={[0, 25, 50, 75, 100]}
           name={chart.data[1]?.subject || 'Y'}
-          tick={{ fill: '#b8b8b8', fontSize: 10 }}
+          tick={{ fill: '#888', fontSize: 9 }}
           axisLine={{ stroke: '#4d4d4d' }}
           label={<CustomYLabel />}
         />
@@ -172,7 +174,8 @@ function RadarChartDisplay({ chart, traitCount, onLabelClick }) {
         <PolarRadiusAxis
           angle={90}
           domain={[0, 100]}
-          tick={false}
+          tick={{ fill: '#666', fontSize: 8 }}
+          tickCount={5}
           axisLine={false}
         />
         <Radar

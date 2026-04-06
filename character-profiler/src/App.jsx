@@ -110,7 +110,7 @@ function AppContent() {
           {/* Left Panel - Controls */}
           <aside 
             ref={leftPanelRef}
-            className="xl:col-span-4 flex flex-col gap-4 overflow-y-auto pr-2 hide-scrollbar pt-2"
+            className="xl:col-span-4 flex flex-col gap-4 overflow-y-auto pr-2 hide-scrollbar scroll-fade py-4"
             style={{ willChange: 'scroll-position' }}
           >
             {/* Branding */}
@@ -141,7 +141,7 @@ function AppContent() {
           {/* Right Panel - Visualization */}
           <section 
             ref={rightPanelRef}
-            className="xl:col-span-8 relative overflow-y-auto minimal-scrollbar pt-2"
+            className="xl:col-span-8 relative overflow-y-auto aesthetic-scrollbar scroll-fade py-4"
             style={{ willChange: 'scroll-position' }}
           >
             {/* View Panel label - excluded from screenshot */}

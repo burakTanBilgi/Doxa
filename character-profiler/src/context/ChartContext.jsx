@@ -150,6 +150,34 @@ export function ChartProvider({ children }) {
     );
   };
 
+  const transferTrait = (fromChartId, fromIndex, toChartId, toIndex = -1) => {
+    setCharts(prevCharts => {
+      const fromChart = prevCharts.find(c => c.id === fromChartId);
+      if (!fromChart || fromChart.data.length <= 2) return prevCharts; // Keep minimum 2 traits
+      
+      const trait = fromChart.data[fromIndex];
+      
+      return prevCharts.map(chart => {
+        if (chart.id === fromChartId) {
+          return {
+            ...chart,
+            data: chart.data.filter((_, idx) => idx !== fromIndex)
+          };
+        }
+        if (chart.id === toChartId) {
+          const newData = [...chart.data];
+          if (toIndex === -1 || toIndex >= newData.length) {
+            newData.push(trait);
+          } else {
+            newData.splice(toIndex, 0, trait);
+          }
+          return { ...chart, data: newData };
+        }
+        return chart;
+      });
+    });
+  };
+
   return (
     <ChartContext.Provider
       value={{
@@ -163,7 +191,8 @@ export function ChartProvider({ children }) {
         updateChartTitle,
         updateTraitName,
         reorderCharts,
-        reorderTraits
+        reorderTraits,
+        transferTrait
       }}
     >
       {children}

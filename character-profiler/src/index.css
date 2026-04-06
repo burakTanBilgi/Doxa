@@ -31,7 +31,7 @@ body {
   font-family: 'Cinzel', serif;
 }
 
-/* Hide left panel scrollbar */
+/* Hide scrollbar */
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -40,40 +40,56 @@ body {
   scrollbar-width: none;
 }
 
-/* Right panel scrollbar - minimal, animated */
-.minimal-scrollbar::-webkit-scrollbar {
-  width: 4px;
+/* Minimal aesthetic scrollbar */
+.aesthetic-scrollbar::-webkit-scrollbar {
+  width: 3px;
 }
 
-.minimal-scrollbar::-webkit-scrollbar-track {
+.aesthetic-scrollbar::-webkit-scrollbar-track {
   background: transparent;
+  margin: 16px 0;
 }
 
-.minimal-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(136, 136, 136, 0.3);
-  border-radius: 4px;
-  transition: background 0.3s ease;
+.aesthetic-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(199, 58, 58, 0.4) 0%, rgba(136, 136, 136, 0.2) 100%);
+  border-radius: 3px;
 }
 
-.minimal-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(136, 136, 136, 0.6);
+.aesthetic-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(199, 58, 58, 0.7) 0%, rgba(136, 136, 136, 0.4) 100%);
 }
 
-.minimal-scrollbar::-webkit-scrollbar-button {
+.aesthetic-scrollbar::-webkit-scrollbar-button {
   display: none;
-  height: 0;
-  width: 0;
 }
 
-.minimal-scrollbar {
+.aesthetic-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(136, 136, 136, 0.3) transparent;
+  scrollbar-color: rgba(199, 58, 58, 0.3) transparent;
 }
 
-/* Default scrollbar styling */
+/* Scroll fade effect using mask */
+.scroll-fade {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 24px,
+    black calc(100% - 24px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 24px,
+    black calc(100% - 24px),
+    transparent 100%
+  );
+}
+
+/* Default - hide all scrollbar arrows globally */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 3px;
+  height: 3px;
 }
 
 ::-webkit-scrollbar-track {
@@ -81,17 +97,19 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(136, 136, 136, 0.3);
-  border-radius: 4px;
+  background: rgba(136, 136, 136, 0.2);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-button {
   display: none;
+  width: 0;
+  height: 0;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(136, 136, 136, 0.3) transparent;
+  scrollbar-color: rgba(136, 136, 136, 0.2) transparent;
 }
 
 /* Animations */

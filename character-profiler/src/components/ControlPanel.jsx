@@ -1,13 +1,64 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useCharts } from '../context/ChartContext';
 import { Plus, Trash2, X, ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
 
-function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDragging, dragOverIndex }) {
+// Auto-scroll when dragging near edges
+function useAutoScroll(containerRef, isDragging) {
+  const scrollSpeed = 8;
+  const edgeThreshold = 60;
+  const animationRef = useRef(null);
+
+  useEffect(() => {
+    if (!isDragging || !containerRef.current) return;
+
+    const handleDragMove = (e) => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const y = e.clientY;
+
+      // Cancel any existing animation
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+
+      const scroll = () => {
+        if (!container) return;
+        
+        if (y < rect.top + edgeThreshold) {
+          // Near top - scroll up
+          const intensity = 1 - (y - rect.top) / edgeThreshold;
+          container.scrollTop -= scrollSpeed * Math.max(0.2, intensity);
+          animationRef.current = requestAnimationFrame(scroll);
+        } else if (y > rect.bottom - edgeThreshold) {
+          // Near bottom - scroll down
+          const intensity = 1 - (rect.bottom - y) / edgeThreshold;
+          container.scrollTop += scrollSpeed * Math.max(0.2, intensity);
+          animationRef.current = requestAnimationFrame(scroll);
+        }
+      };
+
+      scroll();
+    };
+
+    document.addEventListener('dragover', handleDragMove);
+    return () => {
+      document.removeEventListener('dragover', handleDragMove);
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [isDragging, containerRef]);
+}
+
+function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDragging, dragOverIndex, onCrossChartDrop }) {
   const { updateTraitValue, removeTrait, updateTraitName } = useCharts();
   const [isEditing, setIsEditing] = useState(false);
   const [nameInput, setNameInput] = useState(trait.subject);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isBeingDragged, setIsBeingDragged] = useState(false);
+  const [isDraggable, setIsDraggable] = useState(false);
 
   const handleSave = () => {
     if (nameInput.trim()) {
@@ -24,26 +75,36 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
   };
 
   const handleDragStart = (e) => {
+    if (!isDraggable) {
+      e.preventDefault();
+      return;
+    }
     setIsBeingDragged(true);
+    // Store chart ID and trait index for cross-chart transfers
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      chartId: chart.id,
+      traitIndex: index,
+      traitName: trait.subject
+    }));
     onDragStart(e, index);
   };
 
   const handleDragEnd = () => {
     setIsBeingDragged(false);
+    setIsDraggable(false);
   };
 
   const isDropTarget = dragOverIndex === index && !isBeingDragged;
 
   return (
     <div 
-      draggable
+      draggable={isDraggable}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragOver={(e) => onDragOver(e, index)}
       onDrop={(e) => onDrop(e, index)}
       className={`group transition-all duration-200 rounded-lg p-2 -mx-2 ${isDeleting ? 'animate-deleteOut' : ''} ${isBeingDragged ? 'opacity-40 scale-95' : ''} ${isDropTarget ? 'bg-white/5 ring-2 ring-dashed' : ''}`}
       style={{ 
-        cursor: 'grab',
         '--tw-ring-color': isDropTarget ? chart.color + '80' : 'transparent'
       }}
     >
@@ -51,8 +112,10 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
         <div className="flex items-center gap-1">
           <GripVertical 
             size={12} 
-            className="opacity-0 group-hover:opacity-50 transition-opacity cursor-grab" 
+            className="opacity-30 group-hover:opacity-70 transition-opacity cursor-grab active:cursor-grabbing" 
             style={{ color: chart.color }}
+            onMouseDown={() => setIsDraggable(true)}
+            onMouseUp={() => setIsDraggable(false)}
           />
           {isEditing ? (
             <input
@@ -114,7 +177,7 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
 }
 
 function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDragOver, onChartDrop, isDragTarget }) {
-  const { updateChartColor, addTrait, removeChart, updateChartTitle, reorderTraits } = useCharts();
+  const { updateChartColor, addTrait, removeChart, updateChartTitle, reorderTraits, transferTrait } = useCharts();
   const [newTraitName, setNewTraitName] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -181,6 +244,24 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
   const handleTraitDrop = (e, toIndex) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Check if this is a cross-chart transfer
+    try {
+      const data = e.dataTransfer.getData('application/json');
+      if (data) {
+        const { chartId, traitIndex } = JSON.parse(data);
+        if (chartId !== chart.id) {
+          // Cross-chart transfer
+          transferTrait(chartId, traitIndex, chart.id, toIndex);
+          setDraggedTraitIndex(null);
+          setDragOverIndex(null);
+          return;
+        }
+      }
+    } catch (err) {
+      // Not a cross-chart transfer, continue with normal reorder
+    }
+    
     if (draggedTraitIndex !== null && draggedTraitIndex !== toIndex) {
       reorderTraits(chart.id, draggedTraitIndex, toIndex);
     }
@@ -317,8 +398,16 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
         className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}
       >
         <div 
-          className="space-y-1 mb-4"
+          className="space-y-1 mb-4 min-h-[40px] rounded-lg transition-all"
           onDragLeave={() => setDragOverIndex(null)}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+          }}
+          onDrop={(e) => handleTraitDrop(e, chart.data.length)}
+          style={{
+            border: dragOverIndex !== null ? 'none' : undefined
+          }}
         >
           {chart.data.map((trait, index) => (
             <TraitField 
@@ -381,6 +470,10 @@ export default function ControlPanel({ onExport, isExporting }) {
   const [draggedChartIndex, setDraggedChartIndex] = useState(null);
   const [dropTargetIndex, setDropTargetIndex] = useState(null);
   const [dropPosition, setDropPosition] = useState(null); // 'before' | 'after' | 'on'
+  const scrollContainerRef = useRef(null);
+  
+  // Enable auto-scroll when dragging
+  useAutoScroll(scrollContainerRef, draggedChartIndex !== null);
 
   const handleChartDragStart = (e, index) => {
     setDraggedChartIndex(index);
@@ -478,7 +571,7 @@ export default function ControlPanel({ onExport, isExporting }) {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto pr-1">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pr-1">
         {/* Top drop zone */}
         {draggedChartIndex !== null && draggedChartIndex !== 0 && (
           <div

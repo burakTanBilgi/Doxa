@@ -1,8 +1,24 @@
 - [x] The numbers should be displayed on the chart itself as well.
-- [ ] The numbers should of each interval be displayed on the chart itself as well. 
+- [x] The numbers should of each interval be displayed on the chart itself as well. 
 
 - [x] The charts should be draggable on the right panel as well.
+
+- [x] I can't scroll the bars on the control panel when i try to do that i am just dragging the whole field/trait.
+
+- [DO AGAIN] when dragging a chart or field for dragging it should be easier to scroll up or down. Holding the mouse button and just moving the mouse up or down should scroll the panel. in an easy wayz
+
+
 - [x] The charts and the control panels on the left should have better drag/order logic. If a chart is dragged over another chart, it should swap positions. There should be a visual indicator of where the chart will be dropped. also the gaps should be draggable as well.
+
+
+- [DO AGAIN] The fields across charts should be swappable or could be transferred from one chart to another.
+
+## DO LAST (HARD)
+
+
+- [ ] from the view panel a value should be able to be adjusted by scrolling the dot in the chart up or down or sideways
+
+
 
 ## Cinzel and Inter Font
 
