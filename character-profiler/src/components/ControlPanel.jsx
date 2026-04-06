@@ -113,7 +113,7 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
   );
 }
 
-function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDragOver, onChartDrop }) {
+function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDragOver, onChartDrop, isDragTarget }) {
   const { updateChartColor, addTrait, removeChart, updateChartTitle, reorderTraits } = useCharts();
   const [newTraitName, setNewTraitName] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
@@ -234,7 +234,7 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
       draggable
       onDragStart={(e) => handleChartDragStart(e, chartIndex)}
       onDragEnd={handleChartDragEnd}
-      onDragOver={onChartDragOver}
+      onDragOver={(e) => onChartDragOver(e, chartIndex)}
       onDrop={(e) => onChartDrop(e, chartIndex)}
       className={`rounded-2xl p-4 transition-all duration-300 hover:shadow-lg ${isDeleting ? 'animate-deletePanel' : 'animate-slideIn'} ${isDragging ? 'opacity-50 scale-95' : ''}`}
       style={{ 
@@ -379,29 +379,90 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
 export default function ControlPanel({ onExport, isExporting }) {
   const { charts, addNewChart, reorderCharts } = useCharts();
   const [draggedChartIndex, setDraggedChartIndex] = useState(null);
+  const [dropTargetIndex, setDropTargetIndex] = useState(null);
+  const [dropPosition, setDropPosition] = useState(null); // 'before' | 'after' | 'on'
 
   const handleChartDragStart = (e, index) => {
     setDraggedChartIndex(index);
     e.dataTransfer.effectAllowed = 'move';
+    
+    // Create preview
+    const preview = document.createElement('div');
+    preview.style.cssText = `
+      padding: 8px 16px;
+      background: ${charts[index].color};
+      color: white;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    `;
+    preview.textContent = charts[index].title;
+    document.body.appendChild(preview);
+    e.dataTransfer.setDragImage(preview, 50, 20);
+    setTimeout(() => preview.remove(), 0);
   };
 
-  const handleChartDragOver = (e) => {
+  const handleChartDragOver = (e, index) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    
+    if (draggedChartIndex === null || draggedChartIndex === index) return;
+    
+    // Determine drop position based on mouse position within element
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const threshold = rect.height / 2;
+    
+    setDropTargetIndex(index);
+    setDropPosition(y < threshold ? 'before' : 'after');
+  };
+
+  const handleGapDragOver = (e, insertIndex) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropTargetIndex(insertIndex);
+    setDropPosition('gap');
   };
 
   const handleChartDrop = (e, toIndex) => {
     e.preventDefault();
     if (draggedChartIndex !== null && draggedChartIndex !== toIndex) {
-      reorderCharts(draggedChartIndex, toIndex);
+      // Adjust target index based on position
+      let targetIndex = toIndex;
+      if (dropPosition === 'after' && draggedChartIndex < toIndex) {
+        targetIndex = toIndex;
+      } else if (dropPosition === 'before' && draggedChartIndex > toIndex) {
+        targetIndex = toIndex;
+      } else if (dropPosition === 'after') {
+        targetIndex = toIndex + 1;
+      }
+      reorderCharts(draggedChartIndex, Math.min(targetIndex, charts.length - 1));
     }
+    resetDragState();
+  };
+
+  const handleGapDrop = (e, insertIndex) => {
+    e.preventDefault();
+    if (draggedChartIndex !== null) {
+      const targetIndex = draggedChartIndex < insertIndex ? insertIndex - 1 : insertIndex;
+      if (targetIndex !== draggedChartIndex) {
+        reorderCharts(draggedChartIndex, Math.min(targetIndex, charts.length - 1));
+      }
+    }
+    resetDragState();
+  };
+
+  const resetDragState = () => {
     setDraggedChartIndex(null);
+    setDropTargetIndex(null);
+    setDropPosition(null);
   };
 
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: '#888888' }}>Charts</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: '#888888' }}>Control Panel</h2>
         {onExport && (
           <button
             onClick={onExport}
@@ -417,16 +478,59 @@ export default function ControlPanel({ onExport, isExporting }) {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-3 pr-1 scroll-smooth">
-        {charts.map((chart, index) => (
-          <ChartControls 
-            key={chart.id} 
-            chart={chart} 
-            index={index}
-            onChartDragStart={handleChartDragStart}
-            onChartDragOver={handleChartDragOver}
-            onChartDrop={handleChartDrop}
+      <div className="flex-1 overflow-y-auto pr-1">
+        {/* Top drop zone */}
+        {draggedChartIndex !== null && draggedChartIndex !== 0 && (
+          <div
+            className={`h-3 mb-1 rounded-full transition-all duration-200 ${
+              dropTargetIndex === 0 && dropPosition === 'gap' ? 'bg-blue-500/50' : 'bg-transparent hover:bg-gray-600/30'
+            }`}
+            onDragOver={(e) => handleGapDragOver(e, 0)}
+            onDrop={(e) => handleGapDrop(e, 0)}
           />
+        )}
+        
+        {charts.map((chart, index) => (
+          <div key={chart.id}>
+            <div
+              className={`transition-all duration-200 ${
+                draggedChartIndex === index ? 'opacity-40 scale-[0.98]' : ''
+              } ${
+                dropTargetIndex === index && dropPosition === 'before' ? 'translate-y-2' : ''
+              } ${
+                dropTargetIndex === index && dropPosition === 'after' ? '-translate-y-2' : ''
+              }`}
+              style={{
+                borderTop: dropTargetIndex === index && dropPosition === 'before' ? `3px solid ${charts[draggedChartIndex]?.color || '#c73a3a'}` : undefined,
+                borderBottom: dropTargetIndex === index && dropPosition === 'after' ? `3px solid ${charts[draggedChartIndex]?.color || '#c73a3a'}` : undefined,
+              }}
+            >
+              <ChartControls 
+                chart={chart} 
+                index={index}
+                onChartDragStart={handleChartDragStart}
+                onChartDragOver={handleChartDragOver}
+                onChartDrop={handleChartDrop}
+                isDragTarget={dropTargetIndex === index}
+              />
+            </div>
+            
+            {/* Gap between charts */}
+            {index < charts.length - 1 && draggedChartIndex !== null && draggedChartIndex !== index && draggedChartIndex !== index + 1 && (
+              <div
+                className={`h-3 my-1 rounded-full transition-all duration-200 ${
+                  dropTargetIndex === index + 1 && dropPosition === 'gap' ? 'bg-blue-500/50' : 'bg-transparent hover:bg-gray-600/30'
+                }`}
+                onDragOver={(e) => handleGapDragOver(e, index + 1)}
+                onDrop={(e) => handleGapDrop(e, index + 1)}
+              />
+            )}
+            
+            {/* Normal spacing when not dragging */}
+            {(draggedChartIndex === null || draggedChartIndex === index || draggedChartIndex === index + 1) && index < charts.length - 1 && (
+              <div className="h-3" />
+            )}
+          </div>
         ))}
       </div>
 
@@ -439,6 +543,14 @@ export default function ControlPanel({ onExport, isExporting }) {
           color: '#d0d0d0',
           border: '2px dashed #555555'
         }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (draggedChartIndex !== null) {
+            setDropTargetIndex(charts.length);
+            setDropPosition('gap');
+          }
+        }}
+        onDrop={(e) => handleGapDrop(e, charts.length)}
       >
         <Plus size={18} />
         Add New Chart

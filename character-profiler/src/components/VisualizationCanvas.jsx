@@ -1,4 +1,4 @@
-import { forwardRef, useState } from 'react';
+import { forwardRef, useState, useRef } from 'react';
 import { useCharts } from '../context/ChartContext';
 import ChartDisplay from './ChartDisplay';
 
@@ -10,11 +10,14 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
   mainHovered, 
   onCanvasLogoHover
 }, ref) {
-  const { charts } = useCharts();
+  const { charts, reorderCharts } = useCharts();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [titleInput, setTitleInput] = useState(analysisTitle);
   const [descInput, setDescInput] = useState(analysisDescription);
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dropTargetIndex, setDropTargetIndex] = useState(null);
+  const dragImageRef = useRef(null);
 
   const handleTitleSave = () => {
     if (titleInput.trim()) {
@@ -28,6 +31,55 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
       setAnalysisDescription(descInput.trim());
     }
     setIsEditingDesc(false);
+  };
+
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+    
+    // Create mini preview
+    const preview = document.createElement('div');
+    preview.style.cssText = `
+      padding: 8px 16px;
+      background: ${charts[index].color};
+      color: white;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    `;
+    preview.textContent = charts[index].title;
+    document.body.appendChild(preview);
+    dragImageRef.current = preview;
+    e.dataTransfer.setDragImage(preview, 50, 20);
+    setTimeout(() => preview.remove(), 0);
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDropTargetIndex(index);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDropTargetIndex(null);
+  };
+
+  const handleDrop = (e, toIndex) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== toIndex) {
+      reorderCharts(draggedIndex, toIndex);
+    }
+    setDraggedIndex(null);
+    setDropTargetIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDropTargetIndex(null);
   };
 
   return (
@@ -103,7 +155,26 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {charts.map((chart, index) => (
-          <ChartDisplay key={chart.id} chart={chart} index={index} />
+          <div
+            key={chart.id}
+            draggable
+            onDragStart={(e) => handleDragStart(e, index)}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, index)}
+            onDragEnd={handleDragEnd}
+            className={`transition-all duration-200 rounded-2xl ${
+              draggedIndex === index ? 'opacity-50 scale-95' : ''
+            } ${
+              dropTargetIndex === index ? 'ring-2 ring-offset-2 ring-offset-transparent' : ''
+            }`}
+            style={{
+              cursor: 'grab',
+              ringColor: dropTargetIndex === index ? chart.color : undefined
+            }}
+          >
+            <ChartDisplay chart={chart} index={index} />
+          </div>
         ))}
       </div>
       {charts.length === 0 && (

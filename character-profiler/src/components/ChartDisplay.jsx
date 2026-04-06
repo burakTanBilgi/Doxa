@@ -101,7 +101,14 @@ function TwoFieldChart({ chart, onEditField }) {
           <LabelList 
             dataKey="name" 
             position="top" 
+            offset={15}
             style={{ fill: '#d0d0d0', fontSize: 10 }} 
+          />
+          <LabelList 
+            dataKey={(entry) => `(${entry.x}, ${entry.y})`}
+            position="bottom" 
+            offset={8}
+            style={{ fill: chart.color, fontSize: 9, fontWeight: 600 }} 
           />
         </Scatter>
       </ScatterChart>
@@ -112,22 +119,44 @@ function TwoFieldChart({ chart, onEditField }) {
 function RadarChartDisplay({ chart, traitCount, onLabelClick }) {
   const outerRadius = traitCount >= 10 ? '45%' : traitCount >= 7 ? '50%' : '65%';
   const fontSize = traitCount >= 10 ? 7 : traitCount >= 7 ? 8 : 10;
+  const valueFontSize = traitCount >= 10 ? 6 : traitCount >= 7 ? 7 : 8;
 
-  const CustomTick = ({ payload, x, y, textAnchor }) => {
+  const CustomTick = ({ payload, x, y, textAnchor, cx, cy }) => {
     const index = chart.data.findIndex(d => d.subject === payload.value);
+    const value = chart.data[index]?.value || 0;
+    
+    // Calculate position for value label (closer to center)
+    const angle = Math.atan2(y - cy, x - cx);
+    const valueOffset = 12;
+    const valueX = x - Math.cos(angle) * valueOffset;
+    const valueY = y - Math.sin(angle) * valueOffset;
+    
     return (
-      <text
-        x={x}
-        y={y}
-        textAnchor={textAnchor}
-        fill="#b8b8b8"
-        fontSize={fontSize}
-        style={{ cursor: 'pointer' }}
-        onClick={() => onLabelClick(index)}
-        className="hover:fill-white transition-colors"
-      >
-        {payload.value}
-      </text>
+      <g>
+        <text
+          x={x}
+          y={y}
+          textAnchor={textAnchor}
+          fill="#b8b8b8"
+          fontSize={fontSize}
+          style={{ cursor: 'pointer' }}
+          onClick={() => onLabelClick(index)}
+          className="hover:fill-white transition-colors"
+        >
+          {payload.value}
+        </text>
+        <text
+          x={valueX}
+          y={valueY}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill={chart.color}
+          fontSize={valueFontSize}
+          fontWeight="600"
+        >
+          {value}
+        </text>
+      </g>
     );
   };
 

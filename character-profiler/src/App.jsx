@@ -12,85 +12,72 @@ function AppContent() {
   const canvasRef = useRef(null);
   const leftPanelRef = useRef(null);
   const rightPanelRef = useRef(null);
-  const isProgrammaticScroll = useRef(false);
-  const lastUserScrollTime = useRef({ left: 0, right: 0 });
+  const isSyncingRef = useRef(false); // Flag to prevent recursion
   const [isExporting, setIsExporting] = useState(false);
   const [analysisTitle, setAnalysisTitle] = useState('Untitled Analysis');
   const [analysisDescription, setAnalysisDescription] = useState('Character Profile Analysis');
   const [mainHovered, setMainHovered] = useState(false);
   const [canvasHovered, setCanvasHovered] = useState(false);
 
-  // Asymmetric scroll ratio
-  const SCROLL_RATIO = 0.6;
-  const SCROLL_COOLDOWN = 100; // ms to ignore programmatic scroll triggers
-
-  const handleLeftScroll = useCallback(() => {
-    if (isProgrammaticScroll.current) return;
-    
-    const now = Date.now();
-    // Ignore if right panel was just scrolled by user
-    if (now - lastUserScrollTime.current.right < SCROLL_COOLDOWN) return;
-    
-    const left = leftPanelRef.current;
-    const right = rightPanelRef.current;
-    if (!left || !right) return;
-
-    const leftMaxScroll = left.scrollHeight - left.clientHeight;
-    const rightMaxScroll = right.scrollHeight - right.clientHeight;
-    if (leftMaxScroll <= 0 || rightMaxScroll <= 0) return;
-
-    lastUserScrollTime.current.left = now;
-    
-    const leftScrollPercent = left.scrollTop / leftMaxScroll;
-    const targetRight = Math.min(leftScrollPercent * rightMaxScroll * (1 / SCROLL_RATIO), rightMaxScroll);
-    
-    isProgrammaticScroll.current = true;
-    right.scrollTop = targetRight;
-    requestAnimationFrame(() => {
-      isProgrammaticScroll.current = false;
-    });
-  }, []);
-
-  const handleRightScroll = useCallback(() => {
-    if (isProgrammaticScroll.current) return;
-    
-    const now = Date.now();
-    // Ignore if left panel was just scrolled by user
-    if (now - lastUserScrollTime.current.left < SCROLL_COOLDOWN) return;
-    
-    const left = leftPanelRef.current;
-    const right = rightPanelRef.current;
-    if (!left || !right) return;
-
-    const leftMaxScroll = left.scrollHeight - left.clientHeight;
-    const rightMaxScroll = right.scrollHeight - right.clientHeight;
-    if (rightMaxScroll <= 0 || leftMaxScroll <= 0) return;
-
-    lastUserScrollTime.current.right = now;
-    
-    const rightScrollPercent = right.scrollTop / rightMaxScroll;
-    const targetLeft = Math.min(rightScrollPercent * leftMaxScroll * SCROLL_RATIO, leftMaxScroll);
-    
-    isProgrammaticScroll.current = true;
-    left.scrollTop = targetLeft;
-    requestAnimationFrame(() => {
-      isProgrammaticScroll.current = false;
-    });
-  }, []);
-
   useEffect(() => {
     const left = leftPanelRef.current;
     const right = rightPanelRef.current;
     if (!left || !right) return;
 
-    left.addEventListener('scroll', handleLeftScroll, { passive: true });
-    right.addEventListener('scroll', handleRightScroll, { passive: true });
+    // Sync scroll by percentage - both panels reach bottom together
+    // When one is at X%, the other should also be at X%
+    const syncFromLeft = () => {
+      if (isSyncingRef.current) return;
+      
+      const leftMax = left.scrollHeight - left.clientHeight;
+      const rightMax = right.scrollHeight - right.clientHeight;
+      if (leftMax <= 0 || rightMax <= 0) return;
+
+      // Calculate percentage and apply to other panel
+      const percent = left.scrollTop / leftMax;
+      const targetRight = percent * rightMax;
+      
+      if (Math.abs(right.scrollTop - targetRight) > 1) {
+        isSyncingRef.current = true;
+        right.scrollTop = targetRight;
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            isSyncingRef.current = false;
+          });
+        });
+      }
+    };
+
+    const syncFromRight = () => {
+      if (isSyncingRef.current) return;
+      
+      const leftMax = left.scrollHeight - left.clientHeight;
+      const rightMax = right.scrollHeight - right.clientHeight;
+      if (leftMax <= 0 || rightMax <= 0) return;
+
+      // Calculate percentage and apply to other panel
+      const percent = right.scrollTop / rightMax;
+      const targetLeft = percent * leftMax;
+      
+      if (Math.abs(left.scrollTop - targetLeft) > 1) {
+        isSyncingRef.current = true;
+        left.scrollTop = targetLeft;
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            isSyncingRef.current = false;
+          });
+        });
+      }
+    };
+
+    left.addEventListener('scroll', syncFromLeft, { passive: true });
+    right.addEventListener('scroll', syncFromRight, { passive: true });
 
     return () => {
-      left.removeEventListener('scroll', handleLeftScroll);
-      right.removeEventListener('scroll', handleRightScroll);
+      left.removeEventListener('scroll', syncFromLeft);
+      right.removeEventListener('scroll', syncFromRight);
     };
-  }, [handleLeftScroll, handleRightScroll]);
+  }, []);
 
   const handleExport = async () => {
     if (!canvasRef.current) return;
@@ -123,8 +110,8 @@ function AppContent() {
           {/* Left Panel - Controls */}
           <aside 
             ref={leftPanelRef}
-            className="xl:col-span-4 flex flex-col gap-4 overflow-y-auto pr-2"
-            style={{ scrollbarGutter: 'stable', willChange: 'scroll-position' }}
+            className="xl:col-span-4 flex flex-col gap-4 overflow-y-auto pr-2 hide-scrollbar pt-2"
+            style={{ willChange: 'scroll-position' }}
           >
             {/* Branding */}
             <div className="flex items-center gap-3 flex-shrink-0">
@@ -139,7 +126,7 @@ function AppContent() {
                 onMouseEnter={() => setMainHovered(true)}
                 onMouseLeave={() => setMainHovered(false)}
               />
-              <span className="text-lg font-bold tracking-tight" style={{ color: '#d0d0d0' }}>Doxa</span>
+              <span className="text-lg font-bold tracking-tight font-cinzel" style={{ color: '#d0d0d0' }}>Doxa</span>
             </div>
 
             {/* Control Panel */}
@@ -154,12 +141,12 @@ function AppContent() {
           {/* Right Panel - Visualization */}
           <section 
             ref={rightPanelRef}
-            className="xl:col-span-8 relative overflow-y-auto"
+            className="xl:col-span-8 relative overflow-y-auto minimal-scrollbar pt-2"
             style={{ willChange: 'scroll-position' }}
           >
             {/* View Panel label - excluded from screenshot */}
             <div 
-              className="absolute -top-1 right-4 text-xs font-medium uppercase tracking-wider px-2 py-0.5 rounded-b-md z-10"
+              className="absolute top-0 right-4 text-xs font-medium uppercase tracking-wider px-2 py-0.5 rounded-b-md z-10"
               style={{ backgroundColor: '#2d2d2d', color: '#555555' }}
               data-html2canvas-ignore="true"
             >
