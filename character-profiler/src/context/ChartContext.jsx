@@ -85,13 +85,89 @@ export function ChartProvider({ children }) {
     );
   };
 
+  // Convert hex to HSL for color comparison
+  const hexToHsl = (hex) => {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+    if (max === min) {
+      h = s = 0;
+    } else {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+        case g: h = ((b - r) / d + 2) / 6; break;
+        case b: h = ((r - g) / d + 4) / 6; break;
+      }
+      h *= 360;
+    }
+    return { h, s: s * 100, l: l * 100 };
+  };
+
+  // Generate dusky/gloomy colors using HSL, avoiding similar colors
+  // Algorithm: Pick hues from moody palette, weight against existing chart hues
+  const generateDuskyColor = (existingColors) => {
+    const hueRanges = [
+      { min: 0, max: 25 },      // Dusty reds/crimsons
+      { min: 20, max: 45 },     // Muted oranges/terracotta  
+      { min: 180, max: 210 },   // Muted teals/slate blues
+      { min: 260, max: 290 },   // Dusty purples/mauves
+      { min: 340, max: 360 },   // Deep roses
+    ];
+    
+    // Get existing hues
+    const existingHues = existingColors.map(c => hexToHsl(c).h);
+    
+    // Weight ranges by distance from existing hues (further = higher weight)
+    const getMinHueDistance = (hue) => {
+      if (existingHues.length === 0) return 180;
+      return Math.min(...existingHues.map(eh => {
+        const diff = Math.abs(hue - eh);
+        return Math.min(diff, 360 - diff); // Handle wraparound
+      }));
+    };
+    
+    // Generate candidates and pick the one furthest from existing colors
+    let bestHue = 0, bestDistance = -1;
+    for (let i = 0; i < 10; i++) {
+      const range = hueRanges[Math.floor(Math.random() * hueRanges.length)];
+      const candidateHue = Math.floor(Math.random() * (range.max - range.min) + range.min);
+      const distance = getMinHueDistance(candidateHue);
+      if (distance > bestDistance) {
+        bestDistance = distance;
+        bestHue = candidateHue;
+      }
+    }
+    
+    const saturation = Math.floor(Math.random() * 30 + 25); // 25-55%
+    const lightness = Math.floor(Math.random() * 20 + 38);  // 38-58%
+    
+    // Convert HSL to hex
+    const hslToHex = (h, s, l) => {
+      s /= 100;
+      l /= 100;
+      const a = s * Math.min(l, 1 - l);
+      const f = n => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color).toString(16).padStart(2, '0');
+      };
+      return `#${f(0)}${f(8)}${f(4)}`;
+    };
+    
+    return hslToHex(bestHue, saturation, lightness);
+  };
+
   const addNewChart = () => {
     const newId = Math.max(...charts.map(c => c.id), 0) + 1;
-    const colors = ['#c73a3a', '#b8b8b8', '#e05555', '#d0d0d0', '#a82e2e', '#888888'];
+    const existingColors = charts.map(c => c.color);
     const newChart = {
       id: newId,
       title: `New Chart ${newId}`,
-      color: colors[(newId - 1) % colors.length],
+      color: generateDuskyColor(existingColors),
       data: [
         { subject: "Trait 1", value: 50, fullMark: 100 },
         { subject: "Trait 2", value: 50, fullMark: 100 },
@@ -134,6 +210,14 @@ export function ChartProvider({ children }) {
       const result = [...prevCharts];
       const [removed] = result.splice(fromIndex, 1);
       result.splice(toIndex, 0, removed);
+      return result;
+    });
+  };
+
+  const swapCharts = (indexA, indexB) => {
+    setCharts(prevCharts => {
+      const result = [...prevCharts];
+      [result[indexA], result[indexB]] = [result[indexB], result[indexA]];
       return result;
     });
   };
@@ -191,6 +275,7 @@ export function ChartProvider({ children }) {
         updateChartTitle,
         updateTraitName,
         reorderCharts,
+        swapCharts,
         reorderTraits,
         transferTrait
       }}

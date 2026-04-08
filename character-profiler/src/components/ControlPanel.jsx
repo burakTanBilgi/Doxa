@@ -84,6 +84,23 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
   const [isDeleting, setIsDeleting] = useState(false);
   const [isBeingDragged, setIsBeingDragged] = useState(false);
   const [isDraggable, setIsDraggable] = useState(false);
+  const [isSliderActive, setIsSliderActive] = useState(false);
+  const sliderRef = useRef(null);
+
+  // Click outside to deactivate slider and enable dragging
+  useEffect(() => {
+    if (!isSliderActive) return;
+    
+    const handleClickOutside = (e) => {
+      if (sliderRef.current && !sliderRef.current.contains(e.target)) {
+        setIsSliderActive(false);
+        setIsDraggable(true);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isSliderActive]);
 
   const handleSave = () => {
     if (nameInput.trim()) {
@@ -187,14 +204,31 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
         </div>
       </div>
       <input
+        ref={sliderRef}
         type="range"
         min="0"
         max="100"
         value={trait.value}
         onChange={(e) => updateTraitValue(chart.id, index, parseInt(e.target.value))}
-        className="w-full h-2 rounded-full appearance-none cursor-pointer transition-all hover:h-2.5"
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          if (!isSliderActive) {
+            setIsSliderActive(true);
+            setIsDraggable(false);
+          }
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (isSliderActive) {
+            // Second click on slider - deactivate and enable drag
+            setIsSliderActive(false);
+            setIsDraggable(true);
+          }
+        }}
+        className={`w-full h-2 rounded-full appearance-none cursor-pointer transition-all hover:h-2.5 ${isSliderActive ? 'ring-2 ring-offset-1 ring-offset-transparent' : ''}`}
         style={{
-          background: `linear-gradient(to right, ${chart.color} 0%, ${chart.color} ${trait.value}%, #3d3d3d ${trait.value}%, #3d3d3d 100%)`
+          background: `linear-gradient(to right, ${chart.color} 0%, ${chart.color} ${trait.value}%, #3d3d3d ${trait.value}%, #3d3d3d 100%)`,
+          '--tw-ring-color': isSliderActive ? chart.color + '60' : 'transparent'
         }}
       />
     </div>
@@ -346,14 +380,38 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
     setIsDragging(false);
   };
 
+  // Handle cross-chart trait drop on the entire panel
+  const handlePanelDrop = (e) => {
+    // First check if this is a cross-chart trait transfer
+    try {
+      const data = e.dataTransfer.getData('application/json');
+      if (data) {
+        const { chartId, traitIndex } = JSON.parse(data);
+        if (chartId !== chart.id) {
+          e.preventDefault();
+          e.stopPropagation();
+          transferTrait(chartId, traitIndex, chart.id, -1);
+          return;
+        }
+      }
+    } catch (err) {
+      // Not a trait transfer, let chart drop handler handle it
+    }
+    onChartDrop(e, chartIndex);
+  };
+
   return (
     <div
       ref={panelRef}
       draggable
       onDragStart={(e) => handleChartDragStart(e, chartIndex)}
       onDragEnd={handleChartDragEnd}
-      onDragOver={(e) => onChartDragOver(e, chartIndex)}
-      onDrop={(e) => onChartDrop(e, chartIndex)}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        onChartDragOver(e, chartIndex);
+      }}
+      onDrop={handlePanelDrop}
       className={`rounded-2xl p-4 transition-all duration-300 hover:shadow-lg ${isDeleting ? 'animate-deletePanel' : 'animate-slideIn'} ${isDragging ? 'opacity-50 scale-95' : ''}`}
       style={{ 
         backgroundColor: '#252525',

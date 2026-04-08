@@ -1,6 +1,7 @@
 import { forwardRef, useState, useRef } from 'react';
 import { useCharts } from '../context/ChartContext';
 import ChartDisplay from './ChartDisplay';
+import { Plus } from 'lucide-react';
 
 const VisualizationCanvas = forwardRef(function VisualizationCanvas({ 
   analysisTitle, 
@@ -10,13 +11,16 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
   mainHovered, 
   onCanvasLogoHover
 }, ref) {
-  const { charts, reorderCharts } = useCharts();
+  const { charts, reorderCharts, swapCharts, addNewChart } = useCharts();
+  const [addBtnVisible, setAddBtnVisible] = useState(false);
+  const gridRef = useRef(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [titleInput, setTitleInput] = useState(analysisTitle);
   const [descInput, setDescInput] = useState(analysisDescription);
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dropTargetIndex, setDropTargetIndex] = useState(null);
+  const [gapDropIndex, setGapDropIndex] = useState(null);
   const dragImageRef = useRef(null);
 
   const handleTitleSave = () => {
@@ -71,7 +75,7 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
   const handleDrop = (e, toIndex) => {
     e.preventDefault();
     if (draggedIndex !== null && draggedIndex !== toIndex) {
-      reorderCharts(draggedIndex, toIndex);
+      swapCharts(draggedIndex, toIndex);
     }
     setDraggedIndex(null);
     setDropTargetIndex(null);
@@ -80,12 +84,35 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
   const handleDragEnd = () => {
     setDraggedIndex(null);
     setDropTargetIndex(null);
+    setGapDropIndex(null);
+  };
+
+  const handleGapDragOver = (e, gapIndex) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedIndex !== null) {
+      setGapDropIndex(gapIndex);
+      setDropTargetIndex(null);
+    }
+  };
+
+  const handleGapDrop = (e, gapIndex) => {
+    e.preventDefault();
+    if (draggedIndex !== null) {
+      const targetIndex = draggedIndex < gapIndex ? gapIndex - 1 : gapIndex;
+      if (targetIndex !== draggedIndex && targetIndex >= 0) {
+        reorderCharts(draggedIndex, Math.min(targetIndex, charts.length - 1));
+      }
+    }
+    setDraggedIndex(null);
+    setDropTargetIndex(null);
+    setGapDropIndex(null);
   };
 
   return (
     <div
       ref={ref}
-      className="rounded-xl p-6"
+      className="rounded-xl p-6 overflow-hidden"
       style={{ backgroundColor: '#1a1a1a' }}
     >
       {/* Header for export */}
@@ -141,11 +168,11 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
           )}
         </div>
         <img 
-          src="/Doxa2.png" 
+          src="/Doxa3.png" 
           alt="Doxa" 
-          className="h-8 w-auto rounded-lg logo-canvas transition-all duration-300"
+          className="h-14 w-auto logo-canvas transition-all duration-300"
           style={{
-            opacity: mainHovered ? 0.9 : 0.7,
+            opacity: mainHovered ? 1 : 0.85,
             filter: mainHovered ? 'drop-shadow(0 4px 12px rgba(199, 58, 58, 0.6))' : 'none',
             transform: mainHovered ? 'translateY(-2px)' : 'none'
           }}
@@ -153,29 +180,127 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
           onMouseLeave={() => onCanvasLogoHover?.(false)}
         />
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {charts.map((chart, index) => (
+      <div className="relative">
+        <div 
+          ref={gridRef}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-4"
+          onDragOver={(e) => {
+            if (draggedIndex !== null) {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+            }
+          }}
+          onDrop={(e) => handleGapDrop(e, charts.length)}
+        >
+          {charts.map((chart, index) => {
+            const isLeftCol = index % 2 === 0;
+            const isRightCol = index % 2 === 1;
+            return (
+              <div key={chart.id} className="relative">
+                {/* Horizontal gap drop zone above this chart */}
+                {draggedIndex !== null && draggedIndex !== index && (
+                  <div
+                    className={`absolute -top-3 left-0 right-0 h-6 z-10 transition-all duration-200 rounded-full ${
+                      gapDropIndex === index ? 'bg-white/10' : ''
+                    }`}
+                    onDragOver={(e) => handleGapDragOver(e, index)}
+                    onDrop={(e) => handleGapDrop(e, index)}
+                    onDragLeave={() => setGapDropIndex(null)}
+                  >
+                    {gapDropIndex === index && (
+                      <div className="absolute top-1/2 left-4 right-4 h-0.5 -translate-y-1/2 bg-gray-400 rounded-full" />
+                    )}
+                  </div>
+                )}
+                {/* Vertical gap drop zone on the left side of right-column charts */}
+                {draggedIndex !== null && isRightCol && draggedIndex !== index && draggedIndex !== index - 1 && (
+                  <div
+                    className={`absolute -left-3 top-0 bottom-0 w-6 z-10 transition-all duration-200 ${
+                      gapDropIndex === index + 0.5 ? 'bg-white/10' : ''
+                    }`}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      if (draggedIndex !== null) {
+                        setGapDropIndex(index + 0.5);
+                        setDropTargetIndex(null);
+                      }
+                    }}
+                    onDrop={(e) => handleGapDrop(e, index)}
+                    onDragLeave={() => setGapDropIndex(null)}
+                  >
+                    {gapDropIndex === index + 0.5 && (
+                      <div className="absolute left-1/2 top-4 bottom-4 w-0.5 -translate-x-1/2 bg-gray-400 rounded-full" />
+                    )}
+                  </div>
+                )}
+                <div
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
+                  className={`transition-all duration-200 rounded-2xl ${
+                    draggedIndex === index ? 'opacity-50 scale-95' : ''
+                  } ${
+                    dropTargetIndex === index ? 'ring-2 ring-offset-2 ring-offset-transparent' : ''
+                  }`}
+                  style={{
+                    cursor: 'grab',
+                    ringColor: dropTargetIndex === index ? chart.color : undefined
+                  }}
+                >
+                  <ChartDisplay chart={chart} index={index} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Floating Add Chart button - small circle positioned at bottom third of last row */}
+        {charts.length > 0 && (() => {
+          const isLastRowFull = charts.length % 2 === 0;
+          return (
+            <div
+              className="absolute z-30"
+              style={{
+                // Between last 2 charts if even, or right edge of last chart if odd
+                right: isLastRowFull ? 'calc(50% - 16px)' : '0px',
+                bottom: '0px',
+                // Position at 1/3 from bottom of the last chart
+                transform: 'translateY(-33%)',
+              }}
+              onMouseEnter={() => setAddBtnVisible(true)}
+              onMouseLeave={() => setAddBtnVisible(false)}
+            >
+              {/* Larger invisible hover trigger */}
+              <div className="absolute -inset-6" />
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 ease-out ${
+                  addBtnVisible
+                    ? 'opacity-100 scale-100'
+                    : 'opacity-0 scale-75 pointer-events-none'
+                }`}
+                style={{
+                  backgroundColor: '#3a3a3a',
+                  boxShadow: addBtnVisible ? '0 2px 12px rgba(0,0,0,0.4)' : 'none',
+                }}
+                onClick={() => { addNewChart(); setAddBtnVisible(false); }}
+              >
+                <Plus size={16} className="text-gray-400" />
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Hover detection zone at bottom of grid for showing add button */}
+        {charts.length > 0 && !addBtnVisible && (
           <div
-            key={chart.id}
-            draggable
-            onDragStart={(e) => handleDragStart(e, index)}
-            onDragOver={(e) => handleDragOver(e, index)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, index)}
-            onDragEnd={handleDragEnd}
-            className={`transition-all duration-200 rounded-2xl ${
-              draggedIndex === index ? 'opacity-50 scale-95' : ''
-            } ${
-              dropTargetIndex === index ? 'ring-2 ring-offset-2 ring-offset-transparent' : ''
-            }`}
-            style={{
-              cursor: 'grab',
-              ringColor: dropTargetIndex === index ? chart.color : undefined
-            }}
-          >
-            <ChartDisplay chart={chart} index={index} />
-          </div>
-        ))}
+            className="absolute bottom-0 left-0 right-0 h-16 z-20"
+            onMouseEnter={() => setAddBtnVisible(true)}
+          />
+        )}
       </div>
       {charts.length === 0 && (
         <div className="text-center py-12" style={{ color: '#888888' }}>

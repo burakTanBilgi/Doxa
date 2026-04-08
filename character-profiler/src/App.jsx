@@ -151,7 +151,7 @@ function AppContent() {
             {/* Branding */}
             <div className="flex items-center gap-3 flex-shrink-0">
               <img 
-                src="/Doxa2.png" 
+                src="/Doxa3.png" 
                 alt="Doxa" 
                 className="h-8 w-auto rounded-lg logo-main transition-all duration-300"
                 style={{
@@ -182,7 +182,7 @@ function AppContent() {
           {/* Right Panel - Visualization */}
           <section 
             ref={rightPanelRef}
-            className="xl:col-span-8 relative overflow-y-auto aesthetic-scrollbar scroll-fade py-4"
+            className="xl:col-span-8 relative overflow-y-auto overflow-x-hidden aesthetic-scrollbar scroll-fade py-4"
             style={{ willChange: 'scroll-position' }}
           >
             {/* View Panel label - excluded from screenshot */}
