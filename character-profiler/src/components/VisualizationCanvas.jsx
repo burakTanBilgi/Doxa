@@ -193,45 +193,39 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
           onDrop={(e) => handleGapDrop(e, charts.length)}
         >
           {charts.map((chart, index) => {
-            const isLeftCol = index % 2 === 0;
             const isRightCol = index % 2 === 1;
             return (
               <div key={chart.id} className="relative">
-                {/* Horizontal gap drop zone above this chart */}
-                {draggedIndex !== null && draggedIndex !== index && (
-                  <div
-                    className={`absolute -top-3 left-0 right-0 h-6 z-10 transition-all duration-200 rounded-full ${
-                      gapDropIndex === index ? 'bg-white/10' : ''
-                    }`}
-                    onDragOver={(e) => handleGapDragOver(e, index)}
-                    onDrop={(e) => handleGapDrop(e, index)}
-                    onDragLeave={() => setGapDropIndex(null)}
-                  >
-                    {gapDropIndex === index && (
-                      <div className="absolute top-1/2 left-4 right-4 h-0.5 -translate-y-1/2 bg-gray-400 rounded-full" />
-                    )}
-                  </div>
-                )}
-                {/* Vertical gap drop zone on the left side of right-column charts */}
+                {/* Vertical gap drop zone between left-right pairs (centered in the grid gap) */}
                 {draggedIndex !== null && isRightCol && draggedIndex !== index && draggedIndex !== index - 1 && (
                   <div
-                    className={`absolute -left-3 top-0 bottom-0 w-6 z-10 transition-all duration-200 ${
-                      gapDropIndex === index + 0.5 ? 'bg-white/10' : ''
-                    }`}
+                    className="absolute top-0 bottom-0 z-10"
+                    style={{
+                      left: '-10px',
+                      width: '20px',
+                    }}
                     onDragOver={(e) => {
                       e.preventDefault();
                       e.dataTransfer.dropEffect = 'move';
                       if (draggedIndex !== null) {
-                        setGapDropIndex(index + 0.5);
+                        setGapDropIndex(index);
                         setDropTargetIndex(null);
                       }
                     }}
                     onDrop={(e) => handleGapDrop(e, index)}
                     onDragLeave={() => setGapDropIndex(null)}
                   >
-                    {gapDropIndex === index + 0.5 && (
-                      <div className="absolute left-1/2 top-4 bottom-4 w-0.5 -translate-x-1/2 bg-gray-400 rounded-full" />
-                    )}
+                    <div 
+                      className={`absolute left-1/2 -translate-x-1/2 transition-all duration-200 rounded-full ${
+                        gapDropIndex === index ? 'opacity-100' : 'opacity-0'
+                      }`}
+                      style={{
+                        top: '15%',
+                        bottom: '15%',
+                        width: '2px',
+                        background: 'linear-gradient(to bottom, transparent, rgba(160,160,160,0.5) 20%, rgba(160,160,160,0.5) 80%, transparent)',
+                      }}
+                    />
                   </div>
                 )}
                 <div

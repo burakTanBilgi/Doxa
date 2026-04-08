@@ -15,10 +15,11 @@
 - [] On the View Panel: 
   -[] the "Add Chart" button should only pop up only when the right edge of the last chart is hovered upon. It should be like a card (animated) that pops up behind the last chart. LAST CHART. get rid of the previous implementation first
   -[eh] the charts when dragged on top of each other should swap places and the gaps between them should be draggable as well
-  -[] the charts should be draggable to the gaps between them. Example: If dragged between 1-2 the chart should be now the 2nd chart.
-  - [] The add button should not have "Add Chart" text, just the "+" icon
-  - [] The add button should just be a small circle with a "+" icon in it it should not be a card.
-  - [] The add button should be positioned (always) on where it is shown in the screenshot provided in your prompt: one third of the charts' (that are at the bottom of the site) card's height from the bottom. It should be visible when hovered around the area. Even where there are 2 cards at the end of the page this small add button icon should appear between them (where it is always positioned) when hovered upon
+  - [x] The add button should not have "Add Chart" text, just the "+" icon
+  - [x] The add button should just be a small circle with a "+" icon in it it should not be a card.
+  - [eh] The add button should be positioned (always) on where it is shown in the screenshot provided in your prompt: one third of the charts' (that are at the bottom of the site) card's height from the bottom. It should be visible when hovered around the area. Even where there are 2 cards at the end of the page this small add button icon should appear between them (where it is always positioned) when hovered upon
+
+  
 
 ## NOT TO DO (YET)
 

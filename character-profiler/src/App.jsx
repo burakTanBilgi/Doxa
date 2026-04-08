@@ -185,10 +185,10 @@ function AppContent() {
             className="xl:col-span-8 relative overflow-y-auto overflow-x-hidden aesthetic-scrollbar scroll-fade py-4"
             style={{ willChange: 'scroll-position' }}
           >
-            {/* View Panel label - excluded from screenshot */}
+            {/* View Panel label - blends with background, excluded from screenshot */}
             <div 
-              className="absolute top-0 right-4 text-xs font-medium uppercase tracking-wider px-2 py-0.5 rounded-b-md z-10"
-              style={{ backgroundColor: '#2d2d2d', color: '#555555' }}
+              className="absolute top-0 right-4 text-xs font-medium uppercase tracking-wider px-2 py-0.5 z-10"
+              style={{ color: '#444444' }}
               data-html2canvas-ignore="true"
             >
               View Panel
