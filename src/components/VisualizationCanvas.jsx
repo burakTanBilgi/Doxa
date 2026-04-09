@@ -186,7 +186,7 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
           )}
         </div>
         <img 
-          src="/Doxa3.png" 
+          src="/logo.png" 
           alt="Doxa" 
           className="h-10 sm:h-12 w-auto logo-canvas transition-all duration-300"
           style={{

@@ -39,7 +39,6 @@ The entire development was iterative - features were requested, implemented, ref
 ## Project Structure
 
 ```
-character-profiler/
 ├── src/
 │   ├── components/
 │   │   ├── ChartDisplay.jsx    # Individual chart rendering (Radar/Scatter)

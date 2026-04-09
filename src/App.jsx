@@ -166,7 +166,7 @@ function AppContent() {
       <div className="lg:hidden flex items-center justify-between px-3 pt-2 pb-1 flex-shrink-0">
         <div className="flex items-center gap-2">
           <img 
-            src="/Doxa3.png" 
+            src="/logo.png" 
             alt="Doxa" 
             className="h-6 w-auto rounded logo-main"
           />
@@ -209,7 +209,7 @@ function AppContent() {
             {/* Branding - desktop only (mobile has it in the tab bar) */}
             <div className="hidden lg:flex items-center gap-2 flex-shrink-0 mb-1">
               <img 
-                src="/Doxa3.png" 
+                src="/logo.png" 
                 alt="Doxa" 
                 className="h-7 w-auto rounded-lg logo-main transition-all duration-300"
                 style={{
