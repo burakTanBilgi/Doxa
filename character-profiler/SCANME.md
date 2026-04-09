@@ -11,11 +11,11 @@ This document provides context and guidelines for AI assistants working on this 
 ### State Management
 - **ChartContext** (`src/context/ChartContext.jsx`) - Central state for all charts
   - `charts` array with `id`, `title`, `color`, `data` (traits)
-  - Functions: `addNewChart`, `removeChart`, `updateChartTitle`, `updateChartColor`, `addTrait`, `removeTrait`, `updateTraitValue`, `updateTraitName`, `reorderCharts`, `reorderTraits`
+  - Functions: `addNewChart`, `removeChart`, `updateChartTitle`, `updateChartColor`, `addTrait`, `removeTrait`, `updateTraitValue`, `updateTraitName`, `reorderCharts`, `swapCharts`, `reorderTraits`, `transferTrait`, `importCharts`
 
 ### Component Hierarchy
 ```
-App.jsx
+App.jsx (layout, scroll sync, PNG/SVG export, mobile tab switcher)
 ├── MemoizedControlPanel (left panel)
 │   └── ChartControls (per chart)
 │       └── TraitField (per trait)
@@ -23,6 +23,9 @@ App.jsx
     └── ChartDisplay (per chart)
         ├── RadarChartDisplay (3+ traits)
         └── TwoFieldChart (2 traits)
+
+utils/
+└── exportFormats.js (exportAsJson, exportAsMarkdown, parseImportJson)
 ```
 
 ### Key Patterns
@@ -30,7 +33,10 @@ App.jsx
 - **Refs for scroll sync** - `leftPanelRef`, `rightPanelRef` for asymmetric scrolling
 - **Lerp animation** - Smooth scroll interpolation via `requestAnimationFrame`
 - **Inline editing** - Click-to-edit pattern with local state toggle
-- **Custom drag previews** - DOM elements created on drag start
+- **Custom drag previews** - DOM elements created on drag start, positioned off-screen with `position: fixed; top: -1000px`
+- **Import/Export** - Export dropdown (PNG, SVG, JSON, Markdown) + Import button with replace/append prompt
+- **Mobile tabs** - `mobileTab` state toggles between Control and View panels below `lg` breakpoint
+- **Drag handle gating** - `isDragHandleHeld` state on chart panels prevents accidental drags from interactive elements
 
 ## Code Style
 
@@ -45,6 +51,9 @@ App.jsx
 2. **Maintain memoization** - Keep performance optimizations intact
 3. **Test scroll sync** - Changes to layout may affect parallax scrolling
 4. **Check both chart types** - Radar (3+) and Scatter (2) render differently
+5. **Test mobile layout** - Verify tab switching and responsive breakpoints (`lg`)
+6. **Test import/export** - JSON round-trip (export then import), replace vs append modes
+7. **Drag interactions** - Chart panel drag (header/footer handles), trait drag (grip icon), cross-chart trait transfer
 
 ---
 

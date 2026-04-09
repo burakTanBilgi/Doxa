@@ -10,10 +10,12 @@ Doxa Character Profiler lets you create, customize, and export visual personalit
 
 - **Radar Charts** (3+ traits) - Multi-dimensional personality visualization
 - **2D Scatter Charts** (2 traits) - X-Y relationship mapping
-- **PNG Export** - High-quality image export for sharing
-- **Drag & Drop** - Reorder charts and traits intuitively
+- **Multi-Format Export** - PNG, SVG, JSON (re-importable data), and Markdown
+- **JSON Import** - Load saved profiles with replace or append options
+- **Drag & Drop** - Reorder charts and traits with smooth transitions and custom previews
 - **Inline Editing** - Click any label to edit directly on the canvas
 - **Asymmetric Parallax Scrolling** - Smooth linked scrolling between panels
+- **Mobile Support** - Responsive layout with tab switcher for small screens
 
 ## The Vibe Coding Journey
 
@@ -28,6 +30,9 @@ This application was built through collaborative "vibe coding" - a conversationa
 7. **Export** - Integrated html-to-image for PNG screenshot export
 8. **Asymmetric Scrolling** - Implemented proportional parallax scrolling between Control and View panels
 9. **Optimization** - Added memoization, CSS containment, GPU acceleration, and lerp-based smooth scrolling
+10. **Import/Export** - Added JSON and Markdown export, SVG image export, and JSON import with replace/append
+11. **Mobile & Layout** - Responsive tab-based mobile layout, tightened desktop spacing for 100% zoom
+12. **Drag Polish** - Smoothed drag transitions, color-matched drop indicators, better drag previews
 
 The entire development was iterative - features were requested, implemented, refined based on feedback, and optimized for performance.
 
@@ -38,11 +43,13 @@ character-profiler/
 ├── src/
 │   ├── components/
 │   │   ├── ChartDisplay.jsx    # Individual chart rendering (Radar/Scatter)
-│   │   ├── ControlPanel.jsx    # Left panel with chart controls
-│   │   └── VisualizationCanvas.jsx  # Right panel chart grid
+│   │   ├── ControlPanel.jsx    # Left panel with chart controls, import/export UI
+│   │   └── VisualizationCanvas.jsx  # Right panel chart grid with drag-drop reorder
 │   ├── context/
 │   │   └── ChartContext.jsx    # Global state management for charts
-│   ├── App.jsx                 # Main layout, scroll sync, export logic
+│   ├── utils/
+│   │   └── exportFormats.js    # JSON/Markdown export helpers, JSON import parser
+│   ├── App.jsx                 # Main layout, scroll sync, PNG/SVG export
 │   ├── index.css               # Global styles, animations, optimizations
 │   └── main.jsx                # React entry point
 ├── public/
@@ -58,7 +65,7 @@ character-profiler/
 - **Recharts** - Chart library (RadarChart, ScatterChart)
 - **TailwindCSS** - Utility-first styling
 - **Lucide React** - Icon library
-- **html-to-image** - PNG export functionality
+- **html-to-image** - PNG and SVG export functionality
 
 ## Getting Started
 
@@ -79,7 +86,9 @@ npm run build
 2. **Customize** - Change colors, add/remove traits, adjust values with sliders
 3. **Reorder** - Drag charts or traits to rearrange
 4. **Edit Labels** - Click any chart title or axis label to rename
-5. **Export** - Click "Export" to download as PNG
+5. **Export** - Click the export button (↑) to choose PNG, SVG, JSON, or Markdown
+6. **Import** - Click the import button (↓) to load a saved `.json` profile
+7. **Mobile** - On small screens, use the Control/View tabs to switch panels
 
 ## License
 
