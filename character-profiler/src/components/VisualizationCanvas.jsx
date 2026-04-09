@@ -18,9 +18,11 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [titleInput, setTitleInput] = useState(analysisTitle);
   const [descInput, setDescInput] = useState(analysisDescription);
+
+  // --- Drag state: single source of truth ---
   const [draggedIndex, setDraggedIndex] = useState(null);
-  const [dropTargetIndex, setDropTargetIndex] = useState(null);
-  const [gapDropIndex, setGapDropIndex] = useState(null);
+  // dropTarget: null | { type: 'swap', index } | { type: 'gap', pos }
+  const [dropTarget, setDropTarget] = useState(null);
   const dragImageRef = useRef(null);
 
   const handleTitleSave = () => {
@@ -37,12 +39,11 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
     setIsEditingDesc(false);
   };
 
+  // --- Drag handlers ---
   const handleDragStart = (e, index) => {
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', index.toString());
-    
-    // Create mini preview
     const preview = document.createElement('div');
     preview.style.cssText = `
       padding: 8px 16px;
@@ -52,71 +53,88 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
       font-size: 12px;
       font-weight: 600;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      position: fixed;
+      top: -1000px;
+      left: 0;
+      width: fit-content;
+      white-space: nowrap;
     `;
     preview.textContent = charts[index].title;
     document.body.appendChild(preview);
     dragImageRef.current = preview;
     e.dataTransfer.setDragImage(preview, 50, 20);
-    setTimeout(() => preview.remove(), 0);
-  };
-
-  const handleDragOver = (e, index) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (draggedIndex !== null && draggedIndex !== index) {
-      setDropTargetIndex(index);
-    }
-  };
-
-  const handleDragLeave = () => {
-    setDropTargetIndex(null);
-  };
-
-  const handleDrop = (e, toIndex) => {
-    e.preventDefault();
-    if (draggedIndex !== null && draggedIndex !== toIndex) {
-      swapCharts(draggedIndex, toIndex);
-    }
-    setDraggedIndex(null);
-    setDropTargetIndex(null);
+    requestAnimationFrame(() => preview.remove());
   };
 
   const handleDragEnd = () => {
     setDraggedIndex(null);
-    setDropTargetIndex(null);
-    setGapDropIndex(null);
+    setDropTarget(null);
   };
 
-  const handleGapDragOver = (e, gapIndex) => {
+  // Swap: drag over a chart
+  const handleChartDragOver = (e, index) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    if (draggedIndex !== null) {
-      setGapDropIndex(gapIndex);
-      setDropTargetIndex(null);
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDropTarget({ type: 'swap', index });
     }
   };
 
-  const handleGapDrop = (e, gapIndex) => {
+  const handleChartDrop = (e, index) => {
     e.preventDefault();
+    e.stopPropagation();
+    if (draggedIndex !== null && draggedIndex !== index) {
+      swapCharts(draggedIndex, index);
+    }
+    setDraggedIndex(null);
+    setDropTarget(null);
+  };
+
+  // Gap: drag over a gap zone
+  const handleGapDragOver = (e, gapPos) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
     if (draggedIndex !== null) {
-      const targetIndex = draggedIndex < gapIndex ? gapIndex - 1 : gapIndex;
-      if (targetIndex !== draggedIndex && targetIndex >= 0) {
-        reorderCharts(draggedIndex, Math.min(targetIndex, charts.length - 1));
+      setDropTarget({ type: 'gap', pos: gapPos });
+    }
+  };
+
+  const handleGapDrop = (e, gapPos) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedIndex !== null) {
+      const targetIndex = draggedIndex < gapPos ? gapPos - 1 : gapPos;
+      if (targetIndex !== draggedIndex && targetIndex >= 0 && targetIndex < charts.length) {
+        reorderCharts(draggedIndex, targetIndex);
       }
     }
     setDraggedIndex(null);
-    setDropTargetIndex(null);
-    setGapDropIndex(null);
+    setDropTarget(null);
+  };
+
+  // Helper: should a gap be visible? (hide if dragged chart is adjacent)
+  const isGapActive = (gapPos) => {
+    if (draggedIndex === null) return false;
+    if (gapPos === 0) return draggedIndex !== 0;
+    if (gapPos === charts.length) return draggedIndex !== charts.length - 1;
+    // Between chart[gapPos-1] and chart[gapPos]
+    return draggedIndex !== gapPos - 1 && draggedIndex !== gapPos;
+  };
+
+  // Helper: is this gap highlighted right now?
+  const isGapHighlighted = (gapPos) => {
+    return dropTarget?.type === 'gap' && dropTarget.pos === gapPos;
   };
 
   return (
     <div
       ref={ref}
-      className="rounded-xl p-6 overflow-hidden"
+      className="rounded-xl p-4 sm:p-5 overflow-hidden"
       style={{ backgroundColor: '#1a1a1a' }}
     >
       {/* Header for export */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex-1">
           {isEditingTitle ? (
             <input
@@ -125,13 +143,13 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
               onChange={(e) => setTitleInput(e.target.value)}
               onBlur={handleTitleSave}
               onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
-              className="text-2xl font-bold bg-transparent border-b-2 focus:outline-none w-full"
+              className="text-xl sm:text-2xl font-bold bg-transparent border-b-2 focus:outline-none w-full"
               style={{ color: '#c73a3a', borderColor: '#c73a3a' }}
               autoFocus
             />
           ) : (
             <h2 
-              className="text-2xl font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100"
+              className="text-xl sm:text-2xl font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100"
               style={{ color: '#c73a3a' }}
               onClick={() => {
                 setTitleInput(analysisTitle);
@@ -170,7 +188,7 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
         <img 
           src="/Doxa3.png" 
           alt="Doxa" 
-          className="h-14 w-auto logo-canvas transition-all duration-300"
+          className="h-10 sm:h-12 w-auto logo-canvas transition-all duration-300"
           style={{
             opacity: mainHovered ? 1 : 0.85,
             filter: mainHovered ? 'drop-shadow(0 4px 12px rgba(199, 58, 58, 0.6))' : 'none',
@@ -183,92 +201,117 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
       <div className="relative">
         <div 
           ref={gridRef}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-4"
-          onDragOver={(e) => {
-            if (draggedIndex !== null) {
-              e.preventDefault();
-              e.dataTransfer.dropEffect = 'move';
-            }
-          }}
-          onDrop={(e) => handleGapDrop(e, charts.length)}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-3"
         >
           {charts.map((chart, index) => {
             const isRightCol = index % 2 === 1;
+            const isLast = index === charts.length - 1;
+            const isSwapTarget = dropTarget?.type === 'swap' && dropTarget.index === index;
+
             return (
               <div key={chart.id} className="relative">
-                {/* Vertical gap drop zone between left-right pairs (centered in the grid gap) */}
-                {draggedIndex !== null && isRightCol && draggedIndex !== index && draggedIndex !== index - 1 && (
+                {/* Gap: before first chart (left edge of chart 0) */}
+                {index === 0 && isGapActive(0) && (
                   <div
                     className="absolute top-0 bottom-0 z-10"
-                    style={{
-                      left: '-10px',
-                      width: '20px',
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = 'move';
-                      if (draggedIndex !== null) {
-                        setGapDropIndex(index);
-                        setDropTargetIndex(null);
-                      }
-                    }}
-                    onDrop={(e) => handleGapDrop(e, index)}
-                    onDragLeave={() => setGapDropIndex(null)}
+                    style={{ left: '-10px', width: '20px' }}
+                    onDragOver={(e) => handleGapDragOver(e, 0)}
+                    onDrop={(e) => handleGapDrop(e, 0)}
+                    onDragLeave={() => setDropTarget(null)}
                   >
                     <div 
                       className={`absolute left-1/2 -translate-x-1/2 transition-all duration-200 rounded-full ${
-                        gapDropIndex === index ? 'opacity-100' : 'opacity-0'
+                        isGapHighlighted(0) ? 'opacity-100' : 'opacity-0'
                       }`}
                       style={{
-                        top: '15%',
-                        bottom: '15%',
-                        width: '2px',
+                        top: '15%', bottom: '15%', width: '2px',
                         background: 'linear-gradient(to bottom, transparent, rgba(160,160,160,0.5) 20%, rgba(160,160,160,0.5) 80%, transparent)',
                       }}
                     />
                   </div>
                 )}
+
+                {/* Gap: vertical between pairs (left edge of right-col charts) */}
+                {isRightCol && isGapActive(index) && (
+                  <div
+                    className="absolute top-0 bottom-0 z-10"
+                    style={{ left: '-10px', width: '20px' }}
+                    onDragOver={(e) => handleGapDragOver(e, index)}
+                    onDrop={(e) => handleGapDrop(e, index)}
+                    onDragLeave={() => setDropTarget(null)}
+                  >
+                    <div 
+                      className={`absolute left-1/2 -translate-x-1/2 transition-all duration-200 rounded-full ${
+                        isGapHighlighted(index) ? 'opacity-100' : 'opacity-0'
+                      }`}
+                      style={{
+                        top: '15%', bottom: '15%', width: '2px',
+                        background: 'linear-gradient(to bottom, transparent, rgba(160,160,160,0.5) 20%, rgba(160,160,160,0.5) 80%, transparent)',
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Chart card */}
                 <div
                   draggable
                   onDragStart={(e) => handleDragStart(e, index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, index)}
+                  onDragOver={(e) => handleChartDragOver(e, index)}
+                  onDragLeave={() => { if (dropTarget?.type === 'swap' && dropTarget.index === index) setDropTarget(null); }}
+                  onDrop={(e) => handleChartDrop(e, index)}
                   onDragEnd={handleDragEnd}
                   className={`transition-all duration-200 rounded-2xl ${
                     draggedIndex === index ? 'opacity-50 scale-95' : ''
-                  } ${
-                    dropTargetIndex === index ? 'ring-2 ring-offset-2 ring-offset-transparent' : ''
                   }`}
                   style={{
                     cursor: 'grab',
-                    ringColor: dropTargetIndex === index ? chart.color : undefined
+                    boxShadow: isSwapTarget 
+                      ? '0 0 0 2px rgba(160,160,160,0.4), 0 0 16px rgba(160,160,160,0.15)' 
+                      : 'none',
                   }}
                 >
                   <ChartDisplay chart={chart} index={index} />
                 </div>
+
+                {/* Gap: after last chart (right edge) */}
+                {isLast && isGapActive(charts.length) && (
+                  <div
+                    className="absolute top-0 bottom-0 z-10"
+                    style={{ right: '-10px', width: '20px' }}
+                    onDragOver={(e) => handleGapDragOver(e, charts.length)}
+                    onDrop={(e) => handleGapDrop(e, charts.length)}
+                    onDragLeave={() => setDropTarget(null)}
+                  >
+                    <div 
+                      className={`absolute left-1/2 -translate-x-1/2 transition-all duration-200 rounded-full ${
+                        isGapHighlighted(charts.length) ? 'opacity-100' : 'opacity-0'
+                      }`}
+                      style={{
+                        top: '15%', bottom: '15%', width: '2px',
+                        background: 'linear-gradient(to bottom, transparent, rgba(160,160,160,0.5) 20%, rgba(160,160,160,0.5) 80%, transparent)',
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
 
-        {/* Floating Add Chart button - small circle positioned at bottom third of last row */}
+        {/* Floating Add Chart button - small circle at bottom third of last row */}
         {charts.length > 0 && (() => {
           const isLastRowFull = charts.length % 2 === 0;
           return (
             <div
               className="absolute z-30"
               style={{
-                // Between last 2 charts if even, or right edge of last chart if odd
                 right: isLastRowFull ? 'calc(50% - 16px)' : '0px',
                 bottom: '0px',
-                // Position at 1/3 from bottom of the last chart
                 transform: 'translateY(-33%)',
               }}
               onMouseEnter={() => setAddBtnVisible(true)}
               onMouseLeave={() => setAddBtnVisible(false)}
             >
-              {/* Larger invisible hover trigger */}
               <div className="absolute -inset-6" />
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300 ease-out ${
@@ -288,7 +331,7 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
           );
         })()}
 
-        {/* Hover detection zone at bottom of grid for showing add button */}
+        {/* Hover detection zone for add button */}
         {charts.length > 0 && !addBtnVisible && (
           <div
             className="absolute bottom-0 left-0 right-0 h-16 z-20"

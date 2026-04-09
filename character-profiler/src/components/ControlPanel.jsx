@@ -245,7 +245,15 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
   const [draggedTraitIndex, setDraggedTraitIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isDragHandleHeld, setIsDragHandleHeld] = useState(false);
   const panelRef = useRef(null);
+
+  // Reset drag handle on global mouseup
+  useEffect(() => {
+    const handleMouseUp = () => setIsDragHandleHeld(false);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => document.removeEventListener('mouseup', handleMouseUp);
+  }, []);
 
   const handleAddTrait = () => {
     if (newTraitName.trim()) {
@@ -275,7 +283,6 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
     
     // Create custom drag image for trait
     const dragEl = document.createElement('div');
-    dragEl.className = 'drag-preview';
     dragEl.style.cssText = `
       padding: 6px 12px;
       background: ${chart.color};
@@ -284,13 +291,16 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
       font-size: 12px;
       font-weight: 500;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      position: absolute;
+      position: fixed;
       top: -1000px;
+      left: 0;
+      width: fit-content;
+      white-space: nowrap;
     `;
     dragEl.textContent = chart.data[index].subject;
     document.body.appendChild(dragEl);
     e.dataTransfer.setDragImage(dragEl, 40, 15);
-    setTimeout(() => document.body.removeChild(dragEl), 0);
+    requestAnimationFrame(() => document.body.removeChild(dragEl));
   };
 
   const handleTraitDragOver = (e, overIndex) => {
@@ -358,11 +368,13 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
       font-size: 12px;
       font-weight: 600;
       box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-      position: absolute;
+      position: fixed;
       top: -1000px;
+      left: 0;
       display: flex;
       align-items: center;
       gap: 8px;
+      width: fit-content;
       max-width: 180px;
     `;
     dragEl.innerHTML = `
@@ -371,7 +383,7 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
     `;
     document.body.appendChild(dragEl);
     e.dataTransfer.setDragImage(dragEl, 90, 20);
-    setTimeout(() => document.body.removeChild(dragEl), 0);
+    requestAnimationFrame(() => document.body.removeChild(dragEl));
     
     onChartDragStart(e, index);
   };
@@ -403,9 +415,12 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
   return (
     <div
       ref={panelRef}
-      draggable
-      onDragStart={(e) => handleChartDragStart(e, chartIndex)}
-      onDragEnd={handleChartDragEnd}
+      draggable={isDragHandleHeld}
+      onDragStart={(e) => {
+        if (!isDragHandleHeld) { e.preventDefault(); return; }
+        handleChartDragStart(e, chartIndex);
+      }}
+      onDragEnd={() => { handleChartDragEnd(); setIsDragHandleHeld(false); }}
       onDragOver={(e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
@@ -419,15 +434,20 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
         borderLeftColor: chart.color, 
         borderLeftWidth: '4px',
         animationDelay: isDeleting ? '0ms' : `${chartIndex * 100}ms`,
-        cursor: 'grab'
       }}
     >
-      <div className="flex items-center justify-between mb-3">
+      {/* Header - drag handle */}
+      <div 
+        className="flex items-center justify-between mb-3"
+        onMouseDown={() => setIsDragHandleHeld(true)}
+        style={{ cursor: 'grab' }}
+      >
         <div className="flex items-center gap-2 flex-1">
           <input
             type="color"
             value={chart.color}
             onChange={(e) => updateChartColor(chart.id, e.target.value)}
+            onMouseDown={(e) => e.stopPropagation()}
             className="w-6 h-6 rounded-full cursor-pointer border-0 bg-transparent flex-shrink-0 transition-transform hover:scale-110"
             title="Change chart color"
           />
@@ -438,7 +458,8 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
               onChange={(e) => setTitleInput(e.target.value)}
               onBlur={handleTitleSave}
               onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
-              className="px-2 py-1 rounded-lg text-sm flex-1 focus:outline-none transition-all duration-200"
+              onMouseDown={(e) => e.stopPropagation()}
+              className="px-2 py-1 rounded-lg text-sm flex-1 focus:outline-none transition-all duration-200 cursor-text"
               style={{ 
                 backgroundColor: '#3d3d3d', 
                 color: '#d0d0d0',
@@ -462,7 +483,8 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
         <div className="flex items-center gap-1">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90"
+            onMouseDown={(e) => e.stopPropagation()}
+            className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
             style={{ 
               color: chart.color,
               backgroundColor: 'transparent'
@@ -475,7 +497,8 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
           </button>
           <button
             onClick={handleDeleteChart}
-            className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90"
+            onMouseDown={(e) => e.stopPropagation()}
+            className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
             style={{ 
               color: chart.color,
               backgroundColor: 'transparent'
@@ -519,14 +542,20 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
           ))}
         </div>
 
-        <div className="flex gap-2">
+        {/* Bottom area - also a drag handle */}
+        <div 
+          className="flex gap-2"
+          onMouseDown={() => setIsDragHandleHeld(true)}
+          style={{ cursor: 'grab' }}
+        >
           <input
             type="text"
             value={newTraitName}
             onChange={(e) => setNewTraitName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAddTrait()}
+            onMouseDown={(e) => e.stopPropagation()}
             placeholder="New trait name..."
-            className="flex-1 text-sm px-3 py-2 rounded-xl focus:outline-none transition-all duration-200 hover:border-opacity-80 focus:scale-[1.02]"
+            className="flex-1 text-sm px-3 py-2 rounded-xl focus:outline-none transition-all duration-200 hover:border-opacity-80 focus:scale-[1.02] cursor-text"
             style={{ 
               backgroundColor: '#3d3d3d', 
               color: '#d0d0d0',
@@ -544,8 +573,9 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
           />
           <button
             onClick={handleAddTrait}
+            onMouseDown={(e) => e.stopPropagation()}
             disabled={!newTraitName.trim()}
-            className="flex items-center gap-1 px-3 py-2 text-sm rounded-xl transition-all duration-200 hover:scale-105 active:scale-90 hover:shadow-lg"
+            className="flex items-center gap-1 px-3 py-2 text-sm rounded-xl transition-all duration-200 hover:scale-105 active:scale-90 hover:shadow-lg cursor-pointer"
             style={{ 
               backgroundColor: newTraitName.trim() ? chart.color : '#3d3d3d',
               color: newTraitName.trim() ? '#ffffff' : '#888888'
@@ -582,11 +612,16 @@ export default function ControlPanel({ onExport, isExporting, scrollSyncEnabled,
       font-size: 12px;
       font-weight: 600;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      position: fixed;
+      top: -1000px;
+      left: 0;
+      width: fit-content;
+      white-space: nowrap;
     `;
     preview.textContent = charts[index].title;
     document.body.appendChild(preview);
     e.dataTransfer.setDragImage(preview, 50, 20);
-    setTimeout(() => preview.remove(), 0);
+    requestAnimationFrame(() => preview.remove());
   };
 
   const handleChartDragOver = (e, index) => {

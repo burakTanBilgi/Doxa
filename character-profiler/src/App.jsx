@@ -20,8 +20,10 @@ function AppContent() {
   const [canvasHovered, setCanvasHovered] = useState(false);
   const [scrollSyncEnabled, setScrollSyncEnabled] = useState(true);
   const [bothAtTop, setBothAtTop] = useState(true);
+  const [rightAtTop, setRightAtTop] = useState(true);
+  const [mobileTab, setMobileTab] = useState('view'); // 'control' | 'view'
 
-  // Check if both panels are at top
+  // Check if panels are at top
   useEffect(() => {
     const checkAtTop = () => {
       const left = leftPanelRef.current;
@@ -30,6 +32,7 @@ function AppContent() {
       
       const atTop = left.scrollTop < 5 && right.scrollTop < 5;
       setBothAtTop(atTop);
+      setRightAtTop(right.scrollTop < 5);
     };
 
     const left = leftPanelRef.current;
@@ -140,20 +143,56 @@ function AppContent() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: '#1a1a1a' }}>
-      <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 overflow-hidden">
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 h-full">
+      {/* Mobile tab switcher */}
+      <div className="lg:hidden flex items-center justify-between px-3 pt-2 pb-1 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <img 
+            src="/Doxa3.png" 
+            alt="Doxa" 
+            className="h-6 w-auto rounded logo-main"
+          />
+          <span className="text-sm font-bold tracking-tight font-cinzel" style={{ color: '#d0d0d0' }}>Doxa</span>
+        </div>
+        <div className="flex gap-1">
+          <button
+            onClick={() => setMobileTab('control')}
+            className="px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all duration-200"
+            style={{ 
+              backgroundColor: mobileTab === 'control' ? '#2d2d2d' : 'transparent',
+              color: mobileTab === 'control' ? '#d0d0d0' : '#666666'
+            }}
+          >
+            Control
+          </button>
+          <button
+            onClick={() => setMobileTab('view')}
+            className="px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all duration-200"
+            style={{ 
+              backgroundColor: mobileTab === 'view' ? '#2d2d2d' : 'transparent',
+              color: mobileTab === 'view' ? '#d0d0d0' : '#666666'
+            }}
+          >
+            View
+          </button>
+        </div>
+      </div>
+
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-3 py-2 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 h-full">
           {/* Left Panel - Controls */}
           <aside 
             ref={leftPanelRef}
-            className="xl:col-span-4 flex flex-col gap-4 overflow-y-auto pr-2 hide-scrollbar scroll-fade py-4"
+            className={`lg:col-span-4 flex flex-col gap-2 overflow-y-auto pr-1 hide-scrollbar scroll-fade py-3 ${
+              mobileTab !== 'control' ? 'hidden lg:flex' : ''
+            }`}
             style={{ willChange: 'scroll-position' }}
           >
-            {/* Branding */}
-            <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Branding - desktop only (mobile has it in the tab bar) */}
+            <div className="hidden lg:flex items-center gap-2 flex-shrink-0 mb-1">
               <img 
                 src="/Doxa3.png" 
                 alt="Doxa" 
-                className="h-8 w-auto rounded-lg logo-main transition-all duration-300"
+                className="h-7 w-auto rounded-lg logo-main transition-all duration-300"
                 style={{
                   filter: canvasHovered ? 'drop-shadow(0 4px 12px rgba(199, 58, 58, 0.6))' : 'none',
                   transform: canvasHovered ? 'translateY(-2px)' : 'none'
@@ -161,12 +200,12 @@ function AppContent() {
                 onMouseEnter={() => setMainHovered(true)}
                 onMouseLeave={() => setMainHovered(false)}
               />
-              <span className="text-lg font-bold tracking-tight font-cinzel" style={{ color: '#d0d0d0' }}>Doxa</span>
+              <span className="text-base font-bold tracking-tight font-cinzel" style={{ color: '#d0d0d0' }}>Doxa</span>
             </div>
 
             {/* Control Panel */}
             <div 
-              className="rounded-xl p-4 flex flex-col flex-shrink-0"
+              className="rounded-xl p-3 flex flex-col flex-shrink-0"
               style={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', contain: 'layout style' }}
             >
               <MemoizedControlPanel 
@@ -180,29 +219,33 @@ function AppContent() {
           </aside>
 
           {/* Right Panel - Visualization */}
-          <section 
-            ref={rightPanelRef}
-            className="xl:col-span-8 relative overflow-y-auto overflow-x-hidden aesthetic-scrollbar scroll-fade py-4"
-            style={{ willChange: 'scroll-position' }}
-          >
-            {/* View Panel label - blends with background, excluded from screenshot */}
-            <div 
-              className="absolute top-0 right-4 text-xs font-medium uppercase tracking-wider px-2 py-0.5 z-10"
-              style={{ color: '#444444' }}
+          <div className={`lg:col-span-8 relative flex flex-col min-h-0 overflow-hidden ${
+            mobileTab !== 'view' ? 'hidden lg:flex' : ''
+          }`}>
+            {/* View Panel label - outside scroll-fade, excluded from screenshot, fades on scroll */}
+            <h2 
+              className="hidden lg:block text-sm font-semibold uppercase tracking-wider text-right pr-3 pb-1 flex-shrink-0 transition-all duration-300"
+              style={{ color: '#888888', opacity: rightAtTop ? 1 : 0, pointerEvents: rightAtTop ? 'auto' : 'none' }}
               data-html2canvas-ignore="true"
             >
               View Panel
-            </div>
-            <MemoizedVisualizationCanvas 
-              ref={canvasRef} 
-              analysisTitle={analysisTitle}
-              setAnalysisTitle={setAnalysisTitle}
-              analysisDescription={analysisDescription}
-              setAnalysisDescription={setAnalysisDescription}
-              mainHovered={mainHovered}
-              onCanvasLogoHover={setCanvasHovered}
-            />
-          </section>
+            </h2>
+            <section 
+              ref={rightPanelRef}
+              className="flex-1 relative overflow-y-auto overflow-x-hidden aesthetic-scrollbar scroll-fade py-3"
+              style={{ willChange: 'scroll-position' }}
+            >
+              <MemoizedVisualizationCanvas 
+                ref={canvasRef} 
+                analysisTitle={analysisTitle}
+                setAnalysisTitle={setAnalysisTitle}
+                analysisDescription={analysisDescription}
+                setAnalysisDescription={setAnalysisDescription}
+                mainHovered={mainHovered}
+                onCanvasLogoHover={setCanvasHovered}
+              />
+            </section>
+          </div>
         </div>
       </main>
     </div>
