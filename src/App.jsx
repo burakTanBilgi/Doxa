@@ -51,6 +51,9 @@ function AppContent() {
 
   useEffect(() => {
     if (!scrollSyncEnabled) return;
+    // Disable scroll sync on mobile (below lg breakpoint) since only one panel is visible
+    const isMobile = window.matchMedia('(max-width: 1023px)').matches;
+    if (isMobile) return;
     
     const left = leftPanelRef.current;
     const right = rightPanelRef.current;

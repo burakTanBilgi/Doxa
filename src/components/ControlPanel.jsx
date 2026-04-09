@@ -753,11 +753,11 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: '#888888' }}>Control Panel</h2>
         <div className="flex items-center gap-2">
-          {/* Scroll Sync Toggle - only visible when both panels at top */}
+          {/* Scroll Sync Toggle - hidden on mobile, only visible when both panels at top */}
           <button
             onClick={onToggleScrollSync}
             disabled={!canToggleSync}
-            className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-300 ${
+            className={`hidden lg:flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-300 ${
               canToggleSync 
                 ? 'opacity-100 translate-y-0' 
                 : 'opacity-0 translate-y-2 pointer-events-none'
@@ -930,7 +930,7 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
       {/* Add Chart button at bottom */}
       <button
         onClick={addNewChart}
-        className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] hover:shadow-lg animate-pulse-subtle"
+        className="mt-4 mb-16 lg:mb-0 w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] hover:shadow-lg animate-pulse-subtle"
         style={{ 
           backgroundColor: '#3d3d3d',
           color: '#d0d0d0',

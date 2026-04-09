@@ -4,7 +4,7 @@ This document provides context and guidelines for AI assistants working on this 
 
 ## Project Context
 
-**Doxa Character Profiler** is a React application for visualizing personality profiles using radar and scatter charts. It was built through iterative "vibe coding" - collaborative development between a human and AI assistant.
+**Doxa Character Profiler** is a React application for visualizing personality profiles using radar and scatter charts. It was built through iterative "vibe coding" - collaborative development between a human and AI assistant. Live at [https://90-n.netlify.app/](https://90-n.netlify.app/).
 
 ## Architecture Overview
 

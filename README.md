@@ -2,7 +2,11 @@
 
 A visual character analysis tool for creating multi-dimensional personality profiles using interactive radar and scatter charts. Built with React, Recharts, and TailwindCSS.
 
+**Live Demo:** [https://90-n.netlify.app/](https://90-n.netlify.app/)
+
 ![Doxa](public/logo.png)
+![screenshot](image.png)
+![exported-png-example](exportedpngexample.png)
 
 ## What It Does
 
