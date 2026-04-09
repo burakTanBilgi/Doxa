@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useCharts } from '../context/ChartContext';
-import { Plus, Trash2, X, ChevronDown, ChevronUp, GripVertical, Lock, Unlock } from 'lucide-react';
+import { Plus, Trash2, X, ChevronDown, ChevronUp, GripVertical, Lock, Unlock, Download, Upload, Image, FileJson, FileText, FileCode } from 'lucide-react';
+import { exportAsJson, exportAsMarkdown, parseImportJson } from '../utils/exportFormats';
 
 // Auto-scroll when dragging near edges - finds scrollable parent automatically
 function useAutoScroll(isDragging) {
@@ -427,13 +428,16 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
         onChartDragOver(e, chartIndex);
       }}
       onDrop={handlePanelDrop}
-      className={`rounded-2xl p-4 transition-all duration-300 hover:shadow-lg ${isDeleting ? 'animate-deletePanel' : 'animate-slideIn'} ${isDragging ? 'opacity-50 scale-95' : ''}`}
-      style={{ 
-        backgroundColor: '#252525',
-        border: '1px solid #3d3d3d',
-        borderLeftColor: chart.color, 
-        borderLeftWidth: '4px',
-        animationDelay: isDeleting ? '0ms' : `${chartIndex * 100}ms`,
+      className={`rounded-2xl p-4 transition-all duration-300 hover:shadow-lg ${isDeleting ? 'animate-deletePanel' : 'animate-slideIn'}`}
+      style={{
+        ...{
+          backgroundColor: '#252525',
+          border: '1px solid #3d3d3d',
+          borderLeftColor: chart.color, 
+          borderLeftWidth: '4px',
+          animationDelay: isDeleting ? '0ms' : `${chartIndex * 100}ms`,
+        },
+        ...(isDragging ? { opacity: 0.4, transform: 'scale(0.97)', transition: 'opacity 0.2s ease, transform 0.2s ease' } : {}),
       }}
     >
       {/* Header - drag handle */}
@@ -590,13 +594,77 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
   );
 }
 
-export default function ControlPanel({ onExport, isExporting, scrollSyncEnabled, onToggleScrollSync, canToggleSync }) {
-  const { charts, addNewChart, reorderCharts } = useCharts();
+export default function ControlPanel({ onExportPng, onExportSvg, isExporting, scrollSyncEnabled, onToggleScrollSync, canToggleSync, analysisTitle, analysisDescription, setAnalysisTitle, setAnalysisDescription }) {
+  const { charts, addNewChart, reorderCharts, importCharts } = useCharts();
   const [draggedChartIndex, setDraggedChartIndex] = useState(null);
   const [dropTargetIndex, setDropTargetIndex] = useState(null);
   const [dropPosition, setDropPosition] = useState(null); // 'before' | 'after' | 'on'
+  const [exportOpen, setExportOpen] = useState(false);
+  const [importPrompt, setImportPrompt] = useState(null); // { charts, title, description }
+  const exportRef = useRef(null);
+  const fileInputRef = useRef(null);
+
   // Enable auto-scroll when dragging
   useAutoScroll(draggedChartIndex !== null);
+
+  // Close export dropdown on click-outside
+  useEffect(() => {
+    if (!exportOpen) return;
+    const handleClick = (e) => {
+      if (exportRef.current && !exportRef.current.contains(e.target)) {
+        setExportOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [exportOpen]);
+
+  const handleExportJson = () => {
+    exportAsJson(analysisTitle, analysisDescription, charts);
+    setExportOpen(false);
+  };
+
+  const handleExportMarkdown = () => {
+    exportAsMarkdown(analysisTitle, analysisDescription, charts);
+    setExportOpen(false);
+  };
+
+  const handleExportPng = () => {
+    onExportPng?.();
+    setExportOpen(false);
+  };
+
+  const handleExportSvg = () => {
+    onExportSvg?.();
+    setExportOpen(false);
+  };
+
+  const handleImportFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const result = parseImportJson(evt.target.result);
+        setImportPrompt(result);
+      } catch (err) {
+        alert('Failed to import: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleImportConfirm = (mode) => {
+    if (importPrompt) {
+      importCharts(importPrompt.charts, mode);
+      if (mode === 'replace') {
+        setAnalysisTitle?.(importPrompt.title);
+        setAnalysisDescription?.(importPrompt.description);
+      }
+    }
+    setImportPrompt(null);
+  };
 
   const handleChartDragStart = (e, index) => {
     setDraggedChartIndex(index);
@@ -707,29 +775,106 @@ export default function ControlPanel({ onExport, isExporting, scrollSyncEnabled,
             )}
           </button>
           
-          {onExport && (
+          {/* Import button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
+            style={{ backgroundColor: '#3d3d3d', color: '#888888' }}
+            title="Import JSON"
+          >
+            <Download size={13} />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImportFile}
+            className="hidden"
+          />
+
+          {/* Export dropdown */}
+          <div ref={exportRef} className="relative">
             <button
-              onClick={onExport}
+              onClick={() => setExportOpen(!exportOpen)}
               disabled={isExporting}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
+              className="flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
               style={{ 
                 backgroundColor: isExporting ? '#3d3d3d' : '#c73a3a',
                 color: isExporting ? '#888888' : '#ffffff'
               }}
+              title="Export"
             >
-              {isExporting ? 'Saving...' : 'Export'}
+              <Upload size={13} />
             </button>
-          )}
+            {exportOpen && (
+              <div 
+                className="absolute right-0 top-full mt-1 rounded-lg overflow-hidden shadow-xl z-50"
+                style={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', minWidth: '140px' }}
+              >
+                <button onClick={handleExportPng} className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left transition-colors hover:bg-white/5" style={{ color: '#d0d0d0' }}>
+                  <Image size={13} style={{ color: '#c73a3a' }} /> PNG Image
+                </button>
+                <button onClick={handleExportSvg} className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left transition-colors hover:bg-white/5" style={{ color: '#d0d0d0' }}>
+                  <FileCode size={13} style={{ color: '#c73a3a' }} /> SVG Image
+                </button>
+                <div style={{ borderTop: '1px solid #3d3d3d' }} />
+                <button onClick={handleExportJson} className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left transition-colors hover:bg-white/5" style={{ color: '#d0d0d0' }}>
+                  <FileJson size={13} style={{ color: '#888888' }} /> JSON Data
+                </button>
+                <button onClick={handleExportMarkdown} className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left transition-colors hover:bg-white/5" style={{ color: '#d0d0d0' }}>
+                  <FileText size={13} style={{ color: '#888888' }} /> Markdown
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pr-1">
+      {/* Import confirmation prompt */}
+      {importPrompt && (
+        <div 
+          className="mb-3 p-3 rounded-lg text-xs"
+          style={{ backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d' }}
+        >
+          <p style={{ color: '#d0d0d0' }} className="mb-2">
+            Import <strong>{importPrompt.charts.length}</strong> chart{importPrompt.charts.length !== 1 ? 's' : ''} from <strong>"{importPrompt.title}"</strong>?
+          </p>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => handleImportConfirm('replace')}
+              className="flex-1 px-2 py-1.5 text-xs rounded-md transition-all hover:scale-105 active:scale-95"
+              style={{ backgroundColor: '#c73a3a', color: '#ffffff' }}
+            >
+              Replace All
+            </button>
+            <button 
+              onClick={() => handleImportConfirm('append')}
+              className="flex-1 px-2 py-1.5 text-xs rounded-md transition-all hover:scale-105 active:scale-95"
+              style={{ backgroundColor: '#3d3d3d', color: '#d0d0d0' }}
+            >
+              Append
+            </button>
+            <button 
+              onClick={() => setImportPrompt(null)}
+              className="px-2 py-1.5 text-xs rounded-md transition-all hover:scale-105 active:scale-95"
+              style={{ color: '#888888' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto pr-1" onDragEnd={resetDragState}>
         {/* Top drop zone */}
         {draggedChartIndex !== null && draggedChartIndex !== 0 && (
           <div
-            className={`h-3 mb-1 rounded-full transition-all duration-200 ${
-              dropTargetIndex === 0 && dropPosition === 'gap' ? 'bg-blue-500/50' : 'bg-transparent hover:bg-gray-600/30'
-            }`}
+            className="h-3 mb-1 rounded-full transition-all duration-150"
+            style={{
+              backgroundColor: dropTargetIndex === 0 && dropPosition === 'gap' 
+                ? (charts[draggedChartIndex]?.color || '#c73a3a') + '50' 
+                : 'transparent',
+            }}
             onDragOver={(e) => handleGapDragOver(e, 0)}
             onDrop={(e) => handleGapDrop(e, 0)}
           />
@@ -738,16 +883,16 @@ export default function ControlPanel({ onExport, isExporting, scrollSyncEnabled,
         {charts.map((chart, index) => (
           <div key={chart.id}>
             <div
-              className={`transition-all duration-200 ${
-                draggedChartIndex === index ? 'opacity-40 scale-[0.98]' : ''
-              } ${
-                dropTargetIndex === index && dropPosition === 'before' ? 'translate-y-2' : ''
-              } ${
-                dropTargetIndex === index && dropPosition === 'after' ? '-translate-y-2' : ''
-              }`}
+              className="transition-all duration-200"
               style={{
-                borderTop: dropTargetIndex === index && dropPosition === 'before' ? `3px solid ${charts[draggedChartIndex]?.color || '#c73a3a'}` : undefined,
-                borderBottom: dropTargetIndex === index && dropPosition === 'after' ? `3px solid ${charts[draggedChartIndex]?.color || '#c73a3a'}` : undefined,
+                opacity: draggedChartIndex === index ? 0.35 : 1,
+                transform: draggedChartIndex === index ? 'scale(0.97)' : 
+                           (dropTargetIndex === index && dropPosition === 'before') ? 'translateY(3px)' :
+                           (dropTargetIndex === index && dropPosition === 'after') ? 'translateY(-3px)' : 'none',
+                borderTop: dropTargetIndex === index && dropPosition === 'before' ? `2px solid ${charts[draggedChartIndex]?.color || '#c73a3a'}` : '2px solid transparent',
+                borderBottom: dropTargetIndex === index && dropPosition === 'after' ? `2px solid ${charts[draggedChartIndex]?.color || '#c73a3a'}` : '2px solid transparent',
+                borderRadius: '4px',
+                transition: 'all 0.15s ease-out',
               }}
             >
               <ChartControls 
@@ -763,9 +908,12 @@ export default function ControlPanel({ onExport, isExporting, scrollSyncEnabled,
             {/* Gap between charts */}
             {index < charts.length - 1 && draggedChartIndex !== null && draggedChartIndex !== index && draggedChartIndex !== index + 1 && (
               <div
-                className={`h-3 my-1 rounded-full transition-all duration-200 ${
-                  dropTargetIndex === index + 1 && dropPosition === 'gap' ? 'bg-blue-500/50' : 'bg-transparent hover:bg-gray-600/30'
-                }`}
+                className="h-3 my-1 rounded-full transition-all duration-150"
+                style={{
+                  backgroundColor: dropTargetIndex === index + 1 && dropPosition === 'gap'
+                    ? (charts[draggedChartIndex]?.color || '#c73a3a') + '50'
+                    : 'transparent',
+                }}
                 onDragOver={(e) => handleGapDragOver(e, index + 1)}
                 onDrop={(e) => handleGapDrop(e, index + 1)}
               />

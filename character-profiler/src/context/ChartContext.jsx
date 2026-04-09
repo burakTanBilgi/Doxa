@@ -234,6 +234,17 @@ export function ChartProvider({ children }) {
     );
   };
 
+  const importCharts = (newCharts, mode = 'replace') => {
+    if (mode === 'replace') {
+      setCharts(newCharts);
+    } else {
+      setCharts(prev => [...prev, ...newCharts.map((c, i) => ({
+        ...c,
+        id: Math.max(...prev.map(p => p.id), 0) + i + 1
+      }))]);
+    }
+  };
+
   const transferTrait = (fromChartId, fromIndex, toChartId, toIndex = -1) => {
     setCharts(prevCharts => {
       const fromChart = prevCharts.find(c => c.id === fromChartId);
@@ -277,7 +288,8 @@ export function ChartProvider({ children }) {
         reorderCharts,
         swapCharts,
         reorderTraits,
-        transferTrait
+        transferTrait,
+        importCharts
       }}
     >
       {children}

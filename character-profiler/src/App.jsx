@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback, memo } from 'react';
-import { toPng } from 'html-to-image';
+import { toPng, toSvg } from 'html-to-image';
 import { ChartProvider } from './context/ChartContext';
 import ControlPanel from './components/ControlPanel';
 import VisualizationCanvas from './components/VisualizationCanvas';
@@ -117,9 +117,8 @@ function AppContent() {
     }
   };
 
-  const handleExport = async () => {
+  const handleExportPng = async () => {
     if (!canvasRef.current) return;
-
     setIsExporting(true);
     try {
       const dataUrl = await toPng(canvasRef.current, {
@@ -127,15 +126,35 @@ function AppContent() {
         pixelRatio: 2,
         cacheBust: true
       });
-
       const link = document.createElement('a');
       const safeName = analysisTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase();
       link.download = `doxa-${safeName}-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
     } catch (error) {
-      console.error('Export failed:', error);
-      alert('Failed to export image. Please try again.');
+      console.error('PNG export failed:', error);
+      alert('Failed to export PNG. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportSvg = async () => {
+    if (!canvasRef.current) return;
+    setIsExporting(true);
+    try {
+      const dataUrl = await toSvg(canvasRef.current, {
+        backgroundColor: '#1a1a1a',
+        cacheBust: true
+      });
+      const link = document.createElement('a');
+      const safeName = analysisTitle.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+      link.download = `doxa-${safeName}-${Date.now()}.svg`;
+      link.href = dataUrl;
+      link.click();
+    } catch (error) {
+      console.error('SVG export failed:', error);
+      alert('Failed to export SVG. Please try again.');
     } finally {
       setIsExporting(false);
     }
@@ -209,11 +228,16 @@ function AppContent() {
               style={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', contain: 'layout style' }}
             >
               <MemoizedControlPanel 
-                onExport={handleExport} 
+                onExportPng={handleExportPng}
+                onExportSvg={handleExportSvg}
                 isExporting={isExporting}
                 scrollSyncEnabled={scrollSyncEnabled}
                 onToggleScrollSync={toggleScrollSync}
                 canToggleSync={bothAtTop}
+                analysisTitle={analysisTitle}
+                analysisDescription={analysisDescription}
+                setAnalysisTitle={setAnalysisTitle}
+                setAnalysisDescription={setAnalysisDescription}
               />
             </div>
           </aside>
