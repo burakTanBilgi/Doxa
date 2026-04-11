@@ -24,6 +24,17 @@ const initialCharts = [
       { subject: "Empathy", value: 45, fullMark: 100 },
       { subject: "Ego/Confidence", value: 85, fullMark: 100 }
     ]
+  },{
+    id: 3,
+    title: "Ayran",
+    color: "#538b93",
+    data: [
+      { subject: "Tat Dengesi", value: 100, fullMark: 100 },
+      { subject: "Doku", value: 100, fullMark: 100 },
+      { subject: "Ortama Uygunluk", value: 40, fullMark: 100 },
+      { subject: "İçim Kolaylığı", value: 85, fullMark: 100 },
+      { subject: "After Taste", value: 90, fullMark: 100 }
+    ]
   }
 ];
 
