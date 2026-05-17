@@ -53,7 +53,13 @@ export function ChartProvider({ children }) {
   const addComparison = () => {
     setComparisons(prev => {
       const newId = Math.max(0, ...prev.map(c => c.id)) + 1;
-      return [...prev, { id: newId, title: `Comparison ${prev.length + 1}`, chartIds: [] }];
+      return [...prev, {
+        id: newId,
+        title: `Comparison ${prev.length + 1}`,
+        chartIds: [],
+        slotSortMode: 'custom',
+        rowSortMode: 'custom',
+      }];
     });
   };
 
@@ -80,7 +86,13 @@ export function ChartProvider({ children }) {
       if (idx === -1) return prev;
       const source = prev[idx];
       const newId = Math.max(0, ...prev.map(c => c.id)) + 1;
-      const copy = { id: newId, title: `${source.title} copy`, chartIds: [...source.chartIds] };
+      const copy = {
+        id: newId,
+        title: `${source.title} copy`,
+        chartIds: [...source.chartIds],
+        slotSortMode: source.slotSortMode || 'custom',
+        rowSortMode: source.rowSortMode || 'custom',
+      };
       const next = [...prev];
       next.splice(idx + 1, 0, copy);
       return next;
@@ -107,11 +119,24 @@ export function ChartProvider({ children }) {
         title: `${source.title} copy`,
         color: source.color,
         data: source.data.map(t => ({ ...t })),
+        sortMode: source.sortMode || 'custom',
       };
       const next = [...prev];
       next.splice(idx + 1, 0, copy);
       return next;
     });
+  };
+
+  const setChartSortMode = (chartId, mode) => {
+    setCharts(prev => prev.map(c => c.id === chartId ? { ...c, sortMode: mode } : c));
+  };
+
+  const setComparisonSlotSortMode = (cmpId, mode) => {
+    setComparisons(prev => prev.map(c => c.id === cmpId ? { ...c, slotSortMode: mode } : c));
+  };
+
+  const setComparisonRowSortMode = (cmpId, mode) => {
+    setComparisons(prev => prev.map(c => c.id === cmpId ? { ...c, rowSortMode: mode } : c));
   };
 
   const updateTraitValue = (chartId, subjectIndex, newValue) => {
@@ -334,6 +359,8 @@ export function ChartProvider({ children }) {
           id: i + 1,
           title: cmp.title || `Comparison ${i + 1}`,
           chartIds: pruneSelection(newCharts, cmp.chartIds || []),
+          slotSortMode: cmp.slotSortMode || 'custom',
+          rowSortMode: cmp.rowSortMode || 'custom',
         }))
         .filter(c => c.chartIds.length >= 1);
       setComparisons(pruned);
@@ -394,6 +421,7 @@ export function ChartProvider({ children }) {
         transferTrait,
         importCharts,
         duplicateChart,
+        setChartSortMode,
         comparisons,
         addComparison,
         removeComparison,
@@ -401,6 +429,8 @@ export function ChartProvider({ children }) {
         setComparisonChartIds,
         duplicateComparison,
         reorderComparisons,
+        setComparisonSlotSortMode,
+        setComparisonRowSortMode,
       }}
     >
       {children}

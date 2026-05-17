@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { useCharts } from '../context/ChartContext';
 import { buildComparisonView } from '../utils/compareCompatibility';
+import { sortedComparisonView } from '../utils/sortViews';
 
 const ACCENT = '#c73a3a';
 
@@ -15,8 +16,12 @@ export default function ChartComparison({ comparison }) {
   const [titleInput, setTitleInput] = useState(comparison.title);
 
   const view = useMemo(
-    () => buildComparisonView(charts, comparison.chartIds),
-    [charts, comparison.chartIds]
+    () => sortedComparisonView(
+      buildComparisonView(charts, comparison.chartIds),
+      comparison.slotSortMode,
+      comparison.rowSortMode,
+    ),
+    [charts, comparison.chartIds, comparison.slotSortMode, comparison.rowSortMode]
   );
 
   const handleTitleSave = () => {

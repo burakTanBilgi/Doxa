@@ -2,8 +2,26 @@ import { useState } from 'react';
 import { ChevronDown, ChevronUp, Trash2, Copy, GitCompareArrows, Plus, X, ArrowUp, ArrowDown } from 'lucide-react';
 import { useCharts } from '../context/ChartContext';
 import { areCompatible } from '../utils/compareCompatibility';
+import SortMenu from './SortMenu';
+import SlotPicker from './SlotPicker';
 
 const ACCENT = '#c73a3a';
+
+const SLOT_SORT_MODES = [
+  { value: 'custom', label: 'Custom (manual order)' },
+  { value: 'title-asc', label: 'Title A–Z' },
+  { value: 'title-desc', label: 'Title Z–A' },
+];
+
+const buildRowSortModes = (deltaAvailable) => [
+  { value: 'custom', label: 'Custom (baseline order)' },
+  { value: 'name-asc', label: 'Trait A–Z' },
+  { value: 'name-desc', label: 'Trait Z–A' },
+  { value: 'value-asc', label: 'Baseline value ascending' },
+  { value: 'value-desc', label: 'Baseline value descending' },
+  { value: 'delta-asc', label: 'Δ ascending', disabled: !deltaAvailable },
+  { value: 'delta-desc', label: 'Δ descending', disabled: !deltaAvailable },
+];
 
 export default function ComparisonControls({ comparison }) {
   const {
@@ -12,7 +30,13 @@ export default function ComparisonControls({ comparison }) {
     updateComparisonTitle,
     setComparisonChartIds,
     duplicateComparison,
+    setComparisonSlotSortMode,
+    setComparisonRowSortMode,
   } = useCharts();
+
+  const slotSortMode = comparison.slotSortMode || 'custom';
+  const rowSortMode = comparison.rowSortMode || 'custom';
+  const slotSortActive = slotSortMode !== 'custom';
 
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -69,11 +93,10 @@ export default function ComparisonControls({ comparison }) {
     setComparisonChartIds(comparison.id, [...comparison.chartIds, candidate.id]);
   };
 
-  // Eligible charts for a given slot — first slot can be anything, later slots must match baseline.
-  const eligibleFor = (slotIndex, currentId) => {
+  // Compatible charts for a given slot — first slot allows any chart; later slots require matching baseline.
+  // Includes charts already used in this comparison (the picker shows them as "in this comparison").
+  const compatibleFor = (slotIndex) => {
     return charts.filter(c => {
-      if (c.id === currentId) return true;
-      if (comparison.chartIds.includes(c.id)) return false;
       if (slotIndex === 0) return true;
       return baseline && areCompatible(baseline, c);
     });
@@ -130,6 +153,24 @@ export default function ComparisonControls({ comparison }) {
           )}
         </div>
         <div className="flex items-center gap-1">
+          <SortMenu
+            accentColor={ACCENT}
+            title="Sort"
+            sections={[
+              {
+                title: 'Chart slots',
+                modes: SLOT_SORT_MODES,
+                current: slotSortMode,
+                onSelect: (m) => setComparisonSlotSortMode(comparison.id, m),
+              },
+              {
+                title: 'Trait rows',
+                modes: buildRowSortModes(comparison.chartIds.length === 2),
+                current: rowSortMode,
+                onSelect: (m) => setComparisonRowSortMode(comparison.id, m),
+              },
+            ]}
+          />
           <button
             onClick={() => duplicateComparison(comparison.id)}
             className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
@@ -175,10 +216,15 @@ export default function ComparisonControls({ comparison }) {
 
           {comparison.chartIds.map((chartId, slotIndex) => {
             const chart = charts.find(c => c.id === chartId);
-            const eligible = eligibleFor(slotIndex, chartId);
+            const compatible = compatibleFor(slotIndex);
             const isFirst = slotIndex === 0;
             const isLast = slotIndex === comparison.chartIds.length - 1;
-            const canSwap = eligible.length > 1;
+            const canSwap = compatible.length > 1;
+            const chosenIds = new Set(comparison.chartIds.filter((_, i) => i !== slotIndex));
+
+            const moveTitle = slotSortActive
+              ? 'Slot sort mode active — switch to Custom to reorder manually'
+              : null;
 
             return (
               <div
@@ -190,41 +236,29 @@ export default function ComparisonControls({ comparison }) {
                   className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                   style={{ backgroundColor: chart?.color || '#666666' }}
                 />
-                <select
+                <SlotPicker
                   value={chartId}
-                  onChange={(e) => replaceSlot(slotIndex, Number(e.target.value))}
+                  compatibleCharts={compatible}
+                  chosenIds={chosenIds}
+                  onChange={(newId) => replaceSlot(slotIndex, newId)}
                   disabled={!canSwap}
-                  className="flex-1 min-w-0 text-xs px-2 py-1 rounded-md focus:outline-none"
-                  style={{
-                    backgroundColor: '#3d3d3d',
-                    color: '#d0d0d0',
-                    border: 'none',
-                    cursor: canSwap ? 'pointer' : 'not-allowed',
-                    opacity: canSwap ? 1 : 0.7,
-                  }}
-                  title={canSwap
-                    ? (isFirst ? 'Baseline (defines compatibility)' : 'Compatible chart')
-                    : 'No other charts share these trait names'}
-                >
-                  {eligible.map(c => (
-                    <option key={c.id} value={c.id}>{c.title}</option>
-                  ))}
-                </select>
+                  isBaselineSlot={isFirst}
+                />
                 <button
                   onClick={() => moveSlot(slotIndex, -1)}
-                  disabled={isFirst}
+                  disabled={isFirst || slotSortActive}
                   className="p-1 rounded transition-all hover:scale-110 active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed"
                   style={{ color: '#888888' }}
-                  title="Move up"
+                  title={moveTitle || 'Move up'}
                 >
                   <ArrowUp size={12} />
                 </button>
                 <button
                   onClick={() => moveSlot(slotIndex, 1)}
-                  disabled={isLast}
+                  disabled={isLast || slotSortActive}
                   className="p-1 rounded transition-all hover:scale-110 active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed"
                   style={{ color: '#888888' }}
-                  title="Move down"
+                  title={moveTitle || 'Move down'}
                 >
                   <ArrowDown size={12} />
                 </button>

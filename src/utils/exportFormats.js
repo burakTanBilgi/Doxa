@@ -1,3 +1,6 @@
+import { sortedChartData, sortedComparisonView } from './sortViews';
+import { buildComparisonView } from './compareCompatibility';
+
 /**
  * Export chart data as a downloadable JSON file.
  */
@@ -11,12 +14,15 @@ export function exportAsJson(title, description, charts, comparisons = []) {
       title: c.title,
       color: c.color,
       traits: c.data.map(t => ({ name: t.subject, value: t.value })),
+      sortMode: c.sortMode || 'custom',
     })),
     comparisons: comparisons.map(c => ({
       title: c.title,
       chartIndices: c.chartIds
         .map(id => idToIndex.get(id))
         .filter(idx => idx !== undefined),
+      slotSortMode: c.slotSortMode || 'custom',
+      rowSortMode: c.rowSortMode || 'custom',
     })),
   };
 
@@ -36,30 +42,30 @@ export function exportAsMarkdown(title, description, charts, comparisons = []) {
     md += `## ${chart.title}\n`;
     md += '| Trait | Value |\n';
     md += '|-------|-------|\n';
-    for (const trait of chart.data) {
+    for (const trait of sortedChartData(chart)) {
       md += `| ${trait.subject} | ${trait.value} |\n`;
     }
     md += '\n';
   }
 
   for (const cmp of comparisons) {
-    const sel = cmp.chartIds
-      .map(id => charts.find(c => c.id === id))
-      .filter(Boolean);
-    if (sel.length < 2) continue;
+    const rawView = buildComparisonView(charts, cmp.chartIds);
+    const view = sortedComparisonView(rawView, cmp.slotSortMode, cmp.rowSortMode);
+    if (!view) continue;
 
-    const traitOrder = sel[0].data.map(t => t.subject);
     md += `## ${cmp.title || 'Comparison'}\n`;
-    md += `| Trait | ${sel.map(c => c.title).join(' | ')}${sel.length === 2 ? ' | Δ' : ''} |\n`;
-    md += `|-------|${sel.map(() => '------').join('|')}${sel.length === 2 ? '|------' : ''}|\n`;
-    for (const trait of traitOrder) {
-      const values = sel.map(c => {
-        const t = c.data.find(x => x.subject === trait);
-        return t ? t.value : '';
-      });
+
+    const titles = view.series.map(s => s.title);
+    const showDelta = view.deltaPair != null;
+    md += `| Trait | ${titles.join(' | ')}${showDelta ? ' | Δ' : ''} |\n`;
+    md += `|-------|${view.series.map(() => '------').join('|')}${showDelta ? '|------' : ''}|\n`;
+    for (const trait of view.traitOrder) {
+      const values = view.series.map(s => s.valuesByTrait[trait] ?? '');
       let row = `| ${trait} | ${values.join(' | ')}`;
-      if (sel.length === 2) {
-        const d = (values[1] ?? 0) - (values[0] ?? 0);
+      if (showDelta) {
+        const a = view.series.find(s => s.chartId === view.deltaPair.a).valuesByTrait[trait] ?? 0;
+        const b = view.series.find(s => s.chartId === view.deltaPair.b).valuesByTrait[trait] ?? 0;
+        const d = b - a;
         row += ` | ${d > 0 ? `+${d}` : d}`;
       }
       md += row + ' |\n';
@@ -95,6 +101,7 @@ export function parseImportJson(text) {
         value: typeof t.value === 'number' ? Math.min(100, Math.max(0, t.value)) : 50,
         fullMark: 100,
       })),
+      sortMode: c.sortMode || 'custom',
     };
   });
 
@@ -105,6 +112,8 @@ export function parseImportJson(text) {
           chartIds: (c.chartIndices || [])
             .map(idx => charts[idx]?.id)
             .filter(id => id !== undefined),
+          slotSortMode: c.slotSortMode || 'custom',
+          rowSortMode: c.rowSortMode || 'custom',
         }))
         .filter(c => c.chartIds.length >= 1)
     : [];

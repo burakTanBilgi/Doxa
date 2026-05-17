@@ -16,6 +16,7 @@ import {
   LabelList
 } from 'recharts';
 import { useCharts } from '../context/ChartContext';
+import { sortedChartData } from '../utils/sortViews';
 
 function TwoFieldChart({ chart, onEditField }) {
   const scatterData = [{
@@ -209,7 +210,9 @@ export default function ChartDisplay({ chart, index = 0 }) {
   const [titleInput, setTitleInput] = useState(chart.title);
   const [editingFieldIndex, setEditingFieldIndex] = useState(null);
   const [fieldInput, setFieldInput] = useState('');
-  const traitCount = chart.data.length;
+  const displayData = sortedChartData(chart);
+  const displayChart = displayData === chart.data ? chart : { ...chart, data: displayData };
+  const traitCount = displayData.length;
 
   const handleTitleSave = () => {
     if (titleInput.trim()) {
@@ -218,9 +221,14 @@ export default function ChartDisplay({ chart, index = 0 }) {
     setIsEditingTitle(false);
   };
 
-  const handleFieldEdit = (idx) => {
-    setEditingFieldIndex(idx);
-    setFieldInput(chart.data[idx].subject);
+  // Inner components emit indices into displayData; map back to the underlying chart.data
+  // before calling updateTraitName so the rename targets the right trait regardless of sort.
+  const handleFieldEdit = (displayIdx) => {
+    const trait = displayData[displayIdx];
+    const realIdx = chart.data.indexOf(trait);
+    if (realIdx === -1) return;
+    setEditingFieldIndex(realIdx);
+    setFieldInput(trait.subject);
   };
 
   const handleFieldSave = () => {
@@ -284,9 +292,9 @@ export default function ChartDisplay({ chart, index = 0 }) {
 
       <div className="w-full h-[280px]">
         {traitCount === 2 ? (
-          <TwoFieldChart chart={chart} onEditField={handleFieldEdit} />
+          <TwoFieldChart chart={displayChart} onEditField={handleFieldEdit} />
         ) : (
-          <RadarChartDisplay chart={chart} traitCount={traitCount} onLabelClick={handleFieldEdit} />
+          <RadarChartDisplay chart={displayChart} traitCount={traitCount} onLabelClick={handleFieldEdit} />
         )}
       </div>
     </div>

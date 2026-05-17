@@ -2,7 +2,17 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useCharts } from '../context/ChartContext';
 import { Plus, Trash2, X, ChevronDown, ChevronUp, GripVertical, Lock, Unlock, Download, Upload, Image, FileJson, FileText, FileCode, Copy, GitCompareArrows } from 'lucide-react';
 import { exportAsJson, exportAsMarkdown, parseImportJson } from '../utils/exportFormats';
+import { sortedChartData } from '../utils/sortViews';
 import ComparisonControls from './ComparisonControls';
+import SortMenu from './SortMenu';
+
+const CHART_SORT_MODES = [
+  { value: 'custom', label: 'Custom (drag order)' },
+  { value: 'value-asc', label: 'Value ascending' },
+  { value: 'value-desc', label: 'Value descending' },
+  { value: 'name-asc', label: 'Name A–Z' },
+  { value: 'name-desc', label: 'Name Z–A' },
+];
 
 // Auto-scroll when dragging near edges - finds scrollable parent automatically
 function useAutoScroll(isDragging) {
@@ -79,7 +89,7 @@ function useAutoScroll(isDragging) {
   }, [isDragging]);
 }
 
-function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDragging, dragOverIndex, onCrossChartDrop }) {
+function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDragging, dragOverIndex, onCrossChartDrop, sortLocked }) {
   const { updateTraitValue, removeTrait, updateTraitName } = useCharts();
   const [isEditing, setIsEditing] = useState(false);
   const [nameInput, setNameInput] = useState(trait.subject);
@@ -119,7 +129,7 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
   };
 
   const handleDragStart = (e) => {
-    if (!isDraggable) {
+    if (!isDraggable || sortLocked) {
       e.preventDefault();
       return;
     }
@@ -141,25 +151,30 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
   const isDropTarget = dragOverIndex === index && !isBeingDragged;
 
   return (
-    <div 
-      draggable={isDraggable}
+    <div
+      draggable={isDraggable && !sortLocked}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      onDragOver={(e) => onDragOver(e, index)}
-      onDrop={(e) => onDrop(e, index)}
+      onDragOver={(e) => sortLocked ? null : onDragOver(e, index)}
+      onDrop={(e) => sortLocked ? null : onDrop(e, index)}
       className={`group transition-all duration-200 rounded-lg p-2 -mx-2 ${isDeleting ? 'animate-deleteOut' : ''} ${isBeingDragged ? 'opacity-40 scale-95' : ''} ${isDropTarget ? 'bg-white/5 ring-2 ring-dashed' : ''}`}
-      style={{ 
+      style={{
         '--tw-ring-color': isDropTarget ? chart.color + '80' : 'transparent'
       }}
     >
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-1">
-          <GripVertical 
-            size={12} 
-            className="opacity-30 group-hover:opacity-70 transition-opacity cursor-grab active:cursor-grabbing" 
-            style={{ color: chart.color }}
-            onMouseDown={() => setIsDraggable(true)}
+          <GripVertical
+            size={12}
+            className="transition-opacity"
+            style={{
+              color: chart.color,
+              opacity: sortLocked ? 0.15 : 0.3,
+              cursor: sortLocked ? 'not-allowed' : 'grab',
+            }}
+            onMouseDown={() => { if (!sortLocked) setIsDraggable(true); }}
             onMouseUp={() => setIsDraggable(false)}
+            title={sortLocked ? 'Sort mode active — switch to Custom to reorder manually' : 'Drag to reorder'}
           />
           {isEditing ? (
             <input
@@ -238,7 +253,10 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
 }
 
 function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDragOver, onChartDrop, isDragTarget }) {
-  const { updateChartColor, addTrait, removeChart, updateChartTitle, reorderTraits, transferTrait, duplicateChart } = useCharts();
+  const { updateChartColor, addTrait, removeChart, updateChartTitle, reorderTraits, transferTrait, duplicateChart, setChartSortMode } = useCharts();
+  const sortMode = chart.sortMode || 'custom';
+  const isSorted = sortMode !== 'custom';
+  const displayData = sortedChartData(chart);
   const [newTraitName, setNewTraitName] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -486,6 +504,13 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
           )}
         </div>
         <div className="flex items-center gap-1">
+          <SortMenu
+            accentColor={chart.color}
+            modes={CHART_SORT_MODES}
+            current={sortMode}
+            onSelect={(m) => setChartSortMode(chart.id, m)}
+            title={isSorted ? `Sort: ${sortMode}` : 'Sort traits'}
+          />
           <button
             onClick={() => duplicateChart(chart.id)}
             onMouseDown={(e) => e.stopPropagation()}
@@ -546,19 +571,23 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
             border: dragOverIndex !== null ? 'none' : undefined
           }}
         >
-          {chart.data.map((trait, index) => (
-            <TraitField 
-              key={`${chart.id}-${trait.subject}-${index}`} 
-              chart={chart} 
-              trait={trait} 
-              index={index}
-              onDragStart={handleTraitDragStart}
-              onDragOver={handleTraitDragOver}
-              onDrop={handleTraitDrop}
-              isDragging={draggedTraitIndex === index}
-              dragOverIndex={dragOverIndex}
-            />
-          ))}
+          {displayData.map((trait) => {
+            const realIndex = chart.data.indexOf(trait);
+            return (
+              <TraitField
+                key={`${chart.id}-${trait.subject}-${realIndex}`}
+                chart={chart}
+                trait={trait}
+                index={realIndex}
+                onDragStart={handleTraitDragStart}
+                onDragOver={handleTraitDragOver}
+                onDrop={handleTraitDrop}
+                isDragging={draggedTraitIndex === realIndex}
+                dragOverIndex={dragOverIndex}
+                sortLocked={isSorted}
+              />
+            );
+          })}
         </div>
 
         {/* Bottom area - also a drag handle */}
