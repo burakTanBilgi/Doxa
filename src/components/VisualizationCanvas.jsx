@@ -1,6 +1,7 @@
 import { forwardRef, useState, useRef } from 'react';
 import { useCharts } from '../context/ChartContext';
 import ChartDisplay from './ChartDisplay';
+import ChartComparison from './ChartComparison';
 import { Plus } from 'lucide-react';
 
 const VisualizationCanvas = forwardRef(function VisualizationCanvas({ 
@@ -198,6 +199,7 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
           onMouseLeave={() => onCanvasLogoHover?.(false)}
         />
       </div>
+      <ChartComparison />
       <div className="relative">
         <div 
           ref={gridRef}
