@@ -178,6 +178,7 @@ export default function ComparisonControls({ comparison }) {
             const eligible = eligibleFor(slotIndex, chartId);
             const isFirst = slotIndex === 0;
             const isLast = slotIndex === comparison.chartIds.length - 1;
+            const canSwap = eligible.length > 1;
 
             return (
               <div
@@ -192,9 +193,18 @@ export default function ComparisonControls({ comparison }) {
                 <select
                   value={chartId}
                   onChange={(e) => replaceSlot(slotIndex, Number(e.target.value))}
-                  className="flex-1 min-w-0 text-xs px-2 py-1 rounded-md focus:outline-none cursor-pointer"
-                  style={{ backgroundColor: '#3d3d3d', color: '#d0d0d0', border: 'none' }}
-                  title={isFirst ? 'Baseline (defines compatibility)' : 'Compatible chart'}
+                  disabled={!canSwap}
+                  className="flex-1 min-w-0 text-xs px-2 py-1 rounded-md focus:outline-none"
+                  style={{
+                    backgroundColor: '#3d3d3d',
+                    color: '#d0d0d0',
+                    border: 'none',
+                    cursor: canSwap ? 'pointer' : 'not-allowed',
+                    opacity: canSwap ? 1 : 0.7,
+                  }}
+                  title={canSwap
+                    ? (isFirst ? 'Baseline (defines compatibility)' : 'Compatible chart')
+                    : 'No other charts share these trait names'}
                 >
                   {eligible.map(c => (
                     <option key={c.id} value={c.id}>{c.title}</option>
