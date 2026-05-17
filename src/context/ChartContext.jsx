@@ -60,7 +60,7 @@ export function ChartProvider({ children }) {
         chartIds: [],
         slotSortMode: 'custom',
         rowSortMode: 'custom',
-        showDelta: true,
+        showDelta: false,
         aggregateColumns: [],
         aggregateRows: [],
       }];
@@ -97,7 +97,7 @@ export function ChartProvider({ children }) {
         chartIds: [...source.chartIds],
         slotSortMode: source.slotSortMode || 'custom',
         rowSortMode: source.rowSortMode || 'custom',
-        showDelta: source.showDelta !== false,
+        showDelta: source.showDelta === true,
         aggregateColumns: [...(source.aggregateColumns || [])],
         aggregateRows: [...(source.aggregateRows || [])],
       };
@@ -408,7 +408,7 @@ export function ChartProvider({ children }) {
           chartIds: pruneSelection(newCharts, cmp.chartIds || []),
           slotSortMode: cmp.slotSortMode || 'custom',
           rowSortMode: cmp.rowSortMode || 'custom',
-          showDelta: cmp.showDelta !== false,
+          showDelta: cmp.showDelta === true,
           aggregateColumns: Array.isArray(cmp.aggregateColumns) ? cmp.aggregateColumns : [],
           aggregateRows: Array.isArray(cmp.aggregateRows) ? cmp.aggregateRows : [],
         }))

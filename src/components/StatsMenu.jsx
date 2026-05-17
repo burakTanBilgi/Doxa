@@ -112,19 +112,21 @@ export default function StatsMenu({
             zIndex: 9999,
           }}
         >
-          <div>
-            <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider" style={{ color: '#888888' }}>
-              Δ column
+          {deltaAvailable && (
+            <div>
+              <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider" style={{ color: '#888888' }}>
+                Δ column
+              </div>
+              {renderCheckRow(
+                'Show Δ column',
+                !!showDelta,
+                () => onShowDeltaChange(!showDelta),
+                false,
+                null
+              )}
             </div>
-            {renderCheckRow(
-              'Show Δ column',
-              !!showDelta && deltaAvailable,
-              () => onShowDeltaChange(!showDelta),
-              !deltaAvailable,
-              deltaAvailable ? null : 'Only available for comparisons with exactly 2 charts'
-            )}
-          </div>
-          <div style={{ borderTop: '1px solid #3d3d3d' }}>
+          )}
+          <div style={{ borderTop: deltaAvailable ? '1px solid #3d3d3d' : 'none' }}>
             <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider" style={{ color: '#888888' }}>
               Add columns (per trait, across charts)
             </div>

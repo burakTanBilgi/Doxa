@@ -21,7 +21,7 @@ export default function ChartComparison({ comparison }) {
     if (!raw) return null;
     // Honor the per-comparison "show Δ" toggle by clearing deltaPair when off,
     // so the delta-* row sort mode and the Δ column both fall back cleanly.
-    const gated = comparison.showDelta === false ? { ...raw, deltaPair: null } : raw;
+    const gated = comparison.showDelta === true ? raw : { ...raw, deltaPair: null };
     return sortedComparisonView(gated, comparison.slotSortMode, comparison.rowSortMode);
   }, [charts, comparison.chartIds, comparison.slotSortMode, comparison.rowSortMode, comparison.showDelta]);
 
@@ -239,7 +239,18 @@ function DeltaTable({ view, aggregateColumns = [], aggregateRows = [] }) {
             view.traitOrder.map(t => s.valuesByTrait[t] ?? 0)
           );
           const colValues = (chartIdx) => seriesValues[chartIdx];
-          const allValues = seriesValues.flat();
+          // For each aggregate column, the values _in_ that column are the
+          // per-trait results of applying that column aggregate across charts.
+          // The row aggregate then composes over those: e.g. min(means).
+          const columnAggValues = (colAgg) =>
+            view.traitOrder.map(t =>
+              colAgg.compute(view.series.map(s => s.valuesByTrait[t] ?? 0))
+            );
+          // Per-trait Δ values; the row aggregate composes over those for the Δ
+          // intersection cell (e.g. min of deltas).
+          const deltaPerTrait = showDelta
+            ? view.traitOrder.map(t => getValue(bId, t) - getValue(aId, t))
+            : [];
           return (
             <tr key={`agg-row-${agg.key}`} style={{ borderTop: '1px solid #3d3d3d', backgroundColor: '#252525' }}>
               <td className="py-1.5 px-2 italic" style={{ color: '#888888', fontWeight: 600 }}>{agg.label}</td>
@@ -249,18 +260,13 @@ function DeltaTable({ view, aggregateColumns = [], aggregateRows = [] }) {
                 </td>
               ))}
               {colAggs.map(colAgg => (
-                <td key={colAgg.key} className="text-right py-1.5 px-2 tabular-nums italic" style={{ color: '#666666' }}>
-                  {formatAggregate(agg.compute(allValues))}
+                <td key={colAgg.key} className="text-right py-1.5 px-2 tabular-nums italic" style={{ color: '#a0a0a0' }}>
+                  {formatAggregate(agg.compute(columnAggValues(colAgg)))}
                 </td>
               ))}
               {showDelta && (
-                <td className="text-right py-1.5 px-2 tabular-nums italic" style={{ color: '#666666' }}>
-                  {(() => {
-                    const aVals = view.traitOrder.map(t => getValue(aId, t));
-                    const bVals = view.traitOrder.map(t => getValue(bId, t));
-                    const d = agg.compute(bVals) - agg.compute(aVals);
-                    return formatAggregate(d);
-                  })()}
+                <td className="text-right py-1.5 px-2 tabular-nums italic" style={{ color: '#a0a0a0' }}>
+                  {formatAggregate(agg.compute(deltaPerTrait))}
                 </td>
               )}
             </tr>

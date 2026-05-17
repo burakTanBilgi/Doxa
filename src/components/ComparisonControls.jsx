@@ -250,7 +250,7 @@ export default function ComparisonControls({ comparison }) {
           />
           <StatsMenu
             accentColor={ACCENT}
-            showDelta={comparison.showDelta !== false}
+            showDelta={comparison.showDelta === true}
             onShowDeltaChange={(v) => setComparisonShowDelta(comparison.id, v)}
             deltaAvailable={comparison.chartIds.length === 2}
             columnKeys={comparison.aggregateColumns || []}

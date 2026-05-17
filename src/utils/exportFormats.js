@@ -30,7 +30,7 @@ export function exportAsJson(title, description, charts, comparisons = []) {
         .filter(idx => idx !== undefined),
       slotSortMode: c.slotSortMode || 'custom',
       rowSortMode: c.rowSortMode || 'custom',
-      showDelta: c.showDelta !== false,
+      showDelta: c.showDelta === true,
       aggregateColumns: c.aggregateColumns || [],
       aggregateRows: c.aggregateRows || [],
     })),
@@ -66,7 +66,7 @@ export function exportAsMarkdown(title, description, charts, comparisons = []) {
   for (const cmp of comparisons) {
     const rawView = buildComparisonView(charts, cmp.chartIds);
     if (!rawView) continue;
-    const gated = cmp.showDelta === false ? { ...rawView, deltaPair: null } : rawView;
+    const gated = cmp.showDelta === true ? rawView : { ...rawView, deltaPair: null };
     const view = sortedComparisonView(gated, cmp.slotSortMode, cmp.rowSortMode);
     if (!view) continue;
 
@@ -104,14 +104,19 @@ export function exportAsMarkdown(title, description, charts, comparisons = []) {
 
     for (const agg of rowAggs) {
       const seriesValues = view.series.map(s => view.traitOrder.map(t => s.valuesByTrait[t] ?? 0));
-      const allValues = seriesValues.flat();
       const perChart = seriesValues.map(vs => formatAggregate(agg.compute(vs)));
-      const perCol = colAggs.map(() => formatAggregate(agg.compute(allValues)));
+      // Aggregate-row × aggregate-col cell = row agg applied to the column's per-trait results.
+      const perCol = colAggs.map(colAgg =>
+        formatAggregate(agg.compute(
+          view.traitOrder.map(t => colAgg.compute(view.series.map(s => s.valuesByTrait[t] ?? 0)))
+        ))
+      );
       let deltaCell = '';
       if (showDelta) {
         const aVals = view.traitOrder.map(t => view.series.find(s => s.chartId === view.deltaPair.a).valuesByTrait[t] ?? 0);
         const bVals = view.traitOrder.map(t => view.series.find(s => s.chartId === view.deltaPair.b).valuesByTrait[t] ?? 0);
-        deltaCell = formatAggregate(agg.compute(bVals) - agg.compute(aVals));
+        const deltaPerTrait = aVals.map((a, i) => bVals[i] - a);
+        deltaCell = formatAggregate(agg.compute(deltaPerTrait));
       }
       const cells = [...perChart, ...perCol, ...(showDelta ? [deltaCell] : [])];
       md += `| _${agg.label}_ | ${cells.join(' | ')} |\n`;
@@ -163,7 +168,7 @@ export function parseImportJson(text) {
             .filter(id => id !== undefined),
           slotSortMode: c.slotSortMode || 'custom',
           rowSortMode: c.rowSortMode || 'custom',
-          showDelta: c.showDelta !== false,
+          showDelta: c.showDelta === true,
           aggregateColumns: Array.isArray(c.aggregateColumns) ? c.aggregateColumns : [],
           aggregateRows: Array.isArray(c.aggregateRows) ? c.aggregateRows : [],
         }))
