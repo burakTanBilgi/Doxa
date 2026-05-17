@@ -6,6 +6,8 @@ import SortMenu from './SortMenu';
 import StatsMenu from './StatsMenu';
 import SlotPicker from './SlotPicker';
 import EditableDescription from './EditableDescription';
+import Tooltip from './Tooltip';
+import ColorPicker from './ColorPicker';
 
 const ACCENT = '#c73a3a';
 
@@ -193,21 +195,21 @@ export default function ComparisonControls({ comparison }) {
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <label
-            className="relative cursor-pointer flex-shrink-0 transition-transform hover:scale-110"
-            title="Change comparison color"
-            onMouseDown={(e) => e.stopPropagation()}
+          <ColorPicker
+            value={accent}
+            onChange={(c) => updateComparisonColor(comparison.id, c)}
+            accentColor={accent}
           >
-            <input
-              type="color"
-              value={accent}
-              onChange={(e) => updateComparisonColor(comparison.id, e.target.value)}
-              className="absolute inset-0 opacity-0 cursor-pointer"
-              style={{ width: '100%', height: '100%' }}
-              aria-label="Change comparison color"
-            />
-            <GitCompareArrows size={16} style={{ color: accent, flexShrink: 0 }} />
-          </label>
+            <Tooltip content="Change comparison color" accentColor={accent}>
+              <button
+                type="button"
+                className="relative cursor-pointer flex-shrink-0 transition-transform hover:scale-110 p-0 bg-transparent border-0"
+                aria-label="Change comparison color"
+              >
+                <GitCompareArrows size={16} style={{ color: accent, flexShrink: 0 }} />
+              </button>
+            </Tooltip>
+          </ColorPicker>
           {isEditingTitle ? (
             <input
               type="text"
@@ -237,16 +239,17 @@ export default function ComparisonControls({ comparison }) {
         </div>
         <div className="flex items-center gap-1">
           {!comparison.description && (
-            <button
-              onClick={() => setDescEditing(true)}
-              className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
-              style={{ color: accent, backgroundColor: 'transparent' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accent + '20'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              title="Add a description"
-            >
-              <AlignLeft size={16} />
-            </button>
+            <Tooltip content="Add a description" accentColor={accent}>
+              <button
+                onClick={() => setDescEditing(true)}
+                className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
+                style={{ color: accent, backgroundColor: 'transparent' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accent + '20'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <AlignLeft size={16} />
+              </button>
+            </Tooltip>
           )}
           <SortMenu
             accentColor={accent}
@@ -276,36 +279,39 @@ export default function ComparisonControls({ comparison }) {
             onToggleColumn={(k) => toggleComparisonAggregate(comparison.id, 'columns', k)}
             onToggleRow={(k) => toggleComparisonAggregate(comparison.id, 'rows', k)}
           />
-          <button
-            onClick={() => duplicateComparison(comparison.id)}
-            className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
-            style={{ color: accent, backgroundColor: 'transparent' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accent + '20'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            title="Duplicate comparison"
-          >
-            <Copy size={16} />
-          </button>
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
-            style={{ color: accent, backgroundColor: 'transparent' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accent + '20'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            title={isExpanded ? 'Collapse' : 'Expand'}
-          >
-            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </button>
-          <button
-            onClick={handleDelete}
-            className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
-            style={{ color: accent, backgroundColor: 'transparent' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accent + '20'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            title="Delete comparison"
-          >
-            <Trash2 size={16} />
-          </button>
+          <Tooltip content="Duplicate comparison" accentColor={accent}>
+            <button
+              onClick={() => duplicateComparison(comparison.id)}
+              className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
+              style={{ color: accent, backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accent + '20'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <Copy size={16} />
+            </button>
+          </Tooltip>
+          <Tooltip content={isExpanded ? 'Collapse' : 'Expand'} accentColor={accent}>
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
+              style={{ color: accent, backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accent + '20'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+          </Tooltip>
+          <Tooltip content="Delete comparison" accentColor={accent}>
+            <button
+              onClick={handleDelete}
+              className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
+              style={{ color: accent, backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accent + '20'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <Trash2 size={16} />
+            </button>
+          </Tooltip>
         </div>
       </div>
 

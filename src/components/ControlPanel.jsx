@@ -7,6 +7,8 @@ import ComparisonControls from './ComparisonControls';
 import SortMenu from './SortMenu';
 import EditableDescription from './EditableDescription';
 import useFlipReorder from '../hooks/useFlipReorder';
+import Tooltip from './Tooltip';
+import ColorPicker from './ColorPicker';
 
 const CHART_SORT_MODES = [
   { value: 'custom', label: 'Custom (drag order)' },
@@ -492,21 +494,21 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
         style={{ cursor: 'grab' }}
       >
         <div className="flex items-center gap-2 flex-1">
-          <label
-            className="relative cursor-pointer flex-shrink-0 transition-transform hover:scale-110"
-            title="Change chart color"
-            onMouseDown={(e) => e.stopPropagation()}
+          <ColorPicker
+            value={chart.color}
+            onChange={(c) => updateChartColor(chart.id, c)}
+            accentColor={chart.color}
           >
-            <input
-              type="color"
-              value={chart.color}
-              onChange={(e) => updateChartColor(chart.id, e.target.value)}
-              className="absolute inset-0 opacity-0 cursor-pointer"
-              style={{ width: '100%', height: '100%' }}
-              aria-label="Change chart color"
-            />
-            <Radar size={16} style={{ color: chart.color, flexShrink: 0 }} />
-          </label>
+            <Tooltip content="Change chart color" accentColor={chart.color}>
+              <button
+                type="button"
+                className="relative cursor-pointer flex-shrink-0 transition-transform hover:scale-110 p-0 bg-transparent border-0"
+                aria-label="Change chart color"
+              >
+                <Radar size={16} style={{ color: chart.color, flexShrink: 0 }} />
+              </button>
+            </Tooltip>
+          </ColorPicker>
           {isEditingTitle ? (
             <input
               type="text"
@@ -538,17 +540,18 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
         </div>
         <div className="flex items-center gap-1">
           {!chart.description && (
-            <button
-              onClick={() => setDescEditing(true)}
-              onMouseDown={(e) => e.stopPropagation()}
-              className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
-              style={{ color: chart.color, backgroundColor: 'transparent' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = chart.color + '20'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              title="Add a description"
-            >
-              <AlignLeft size={16} />
-            </button>
+            <Tooltip content="Add a description" accentColor={chart.color}>
+              <button
+                onClick={() => setDescEditing(true)}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
+                style={{ color: chart.color, backgroundColor: 'transparent' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = chart.color + '20'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <AlignLeft size={16} />
+              </button>
+            </Tooltip>
           )}
           <SortMenu
             accentColor={chart.color}
@@ -557,48 +560,42 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
             onSelect={(m) => setChartSortMode(chart.id, m)}
             title={isSorted ? `Sort: ${sortMode}` : 'Sort traits'}
           />
-          <button
-            onClick={() => duplicateChart(chart.id)}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
-            style={{
-              color: chart.color,
-              backgroundColor: 'transparent'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = chart.color + '20'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            title="Duplicate chart"
-          >
-            <Copy size={16} />
-          </button>
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
-            style={{
-              color: chart.color,
-              backgroundColor: 'transparent'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = chart.color + '20'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            title={isExpanded ? "Collapse" : "Expand"}
-          >
-            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </button>
-          <button
-            onClick={handleDeleteChart}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
-            style={{ 
-              color: chart.color,
-              backgroundColor: 'transparent'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = chart.color + '20'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            title="Delete chart"
-          >
-            <Trash2 size={16} />
-          </button>
+          <Tooltip content="Duplicate chart" accentColor={chart.color}>
+            <button
+              onClick={() => duplicateChart(chart.id)}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
+              style={{ color: chart.color, backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = chart.color + '20'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <Copy size={16} />
+            </button>
+          </Tooltip>
+          <Tooltip content={isExpanded ? 'Collapse' : 'Expand'} accentColor={chart.color}>
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
+              style={{ color: chart.color, backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = chart.color + '20'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+          </Tooltip>
+          <Tooltip content="Delete chart" accentColor={chart.color}>
+            <button
+              onClick={handleDeleteChart}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
+              style={{ color: chart.color, backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = chart.color + '20'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <Trash2 size={16} />
+            </button>
+          </Tooltip>
         </div>
       </div>
 
