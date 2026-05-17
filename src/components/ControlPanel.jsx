@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useCharts } from '../context/ChartContext';
-import { Plus, Trash2, X, ChevronDown, ChevronUp, GripVertical, Lock, Unlock, Download, Upload, Image, FileJson, FileText, FileCode, Copy, GitCompareArrows, AlignLeft } from 'lucide-react';
+import { Plus, Trash2, X, ChevronDown, ChevronUp, GripVertical, Lock, Unlock, Download, Upload, Image, FileJson, FileText, FileCode, Copy, GitCompareArrows, AlignLeft, Radar } from 'lucide-react';
 import { exportAsJson, exportAsMarkdown, parseImportJson } from '../utils/exportFormats';
 import { sortedChartData } from '../utils/sortViews';
 import ComparisonControls from './ComparisonControls';
@@ -500,6 +500,7 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
             className="w-6 h-6 rounded-full cursor-pointer border-0 bg-transparent flex-shrink-0 transition-transform hover:scale-110"
             title="Change chart color"
           />
+          <Radar size={16} style={{ color: chart.color, flexShrink: 0 }} />
           {isEditingTitle ? (
             <input
               type="text"

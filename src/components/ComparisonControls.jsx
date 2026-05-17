@@ -184,7 +184,9 @@ export default function ComparisonControls({ comparison }) {
       className={`relative rounded-2xl p-3 transition-all duration-300 ease-out`}
       style={{
         backgroundColor: '#1a1a1a',
-        border: `1px solid ${accent}40`,
+        border: '1px solid #3d3d3d',
+        borderLeftColor: accent,
+        borderLeftWidth: '4px',
         opacity: isDeleting ? 0 : 1,
         transform: isDeleting ? 'scale(0.95)' : 'scale(1)',
       }}
