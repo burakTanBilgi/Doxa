@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useCharts } from '../context/ChartContext';
-import { Plus, Trash2, X, ChevronDown, ChevronUp, GripVertical, Lock, Unlock, Download, Upload, Image, FileJson, FileText, FileCode } from 'lucide-react';
+import { Plus, Trash2, X, ChevronDown, ChevronUp, GripVertical, Lock, Unlock, Download, Upload, Image, FileJson, FileText, FileCode, GitCompare } from 'lucide-react';
 import { exportAsJson, exportAsMarkdown, parseImportJson } from '../utils/exportFormats';
+import { areCompatible } from '../utils/compareCompatibility';
 
 // Auto-scroll when dragging near edges - finds scrollable parent automatically
 function useAutoScroll(isDragging) {
@@ -237,7 +238,7 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
 }
 
 function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDragOver, onChartDrop, isDragTarget }) {
-  const { updateChartColor, addTrait, removeChart, updateChartTitle, reorderTraits, transferTrait } = useCharts();
+  const { charts: allCharts, updateChartColor, addTrait, removeChart, updateChartTitle, reorderTraits, transferTrait, compareMode, compareSelection, toggleChartInComparison } = useCharts();
   const [newTraitName, setNewTraitName] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -255,6 +256,13 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
     document.addEventListener('mouseup', handleMouseUp);
     return () => document.removeEventListener('mouseup', handleMouseUp);
   }, []);
+
+  const isSelected = compareSelection.includes(chart.id);
+  const baselineId = compareSelection[0];
+  const baselineChart = baselineId != null ? allCharts.find(c => c.id === baselineId) : null;
+  const isEligible = !baselineChart
+    || baselineChart.id === chart.id
+    || areCompatible(baselineChart, chart);
 
   const handleAddTrait = () => {
     if (newTraitName.trim()) {
@@ -447,6 +455,24 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
         style={{ cursor: 'grab' }}
       >
         <div className="flex items-center gap-2 flex-1">
+          {compareMode && (
+            <input
+              type="checkbox"
+              checked={isSelected}
+              disabled={!isEligible}
+              onChange={() => toggleChartInComparison(chart.id)}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="w-4 h-4 flex-shrink-0 transition-opacity"
+              style={{
+                accentColor: chart.color,
+                opacity: isEligible ? 1 : 0.4,
+                cursor: isEligible ? 'pointer' : 'not-allowed'
+              }}
+              title={isEligible
+                ? (isSelected ? 'Remove from comparison' : 'Add to comparison')
+                : "Different trait set — can't compare with selected charts"}
+            />
+          )}
           <input
             type="color"
             value={chart.color}
@@ -595,7 +621,7 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
 }
 
 export default function ControlPanel({ onExportPng, onExportSvg, isExporting, scrollSyncEnabled, onToggleScrollSync, canToggleSync, analysisTitle, analysisDescription, setAnalysisTitle, setAnalysisDescription }) {
-  const { charts, addNewChart, reorderCharts, importCharts } = useCharts();
+  const { charts, addNewChart, reorderCharts, importCharts, compareMode, compareSelection, toggleCompareMode } = useCharts();
   const [draggedChartIndex, setDraggedChartIndex] = useState(null);
   const [dropTargetIndex, setDropTargetIndex] = useState(null);
   const [dropPosition, setDropPosition] = useState(null); // 'before' | 'after' | 'on'
@@ -753,6 +779,19 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: '#888888' }}>Control Panel</h2>
         <div className="flex items-center gap-2">
+          {/* Compare mode toggle */}
+          <button
+            onClick={toggleCompareMode}
+            className="flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
+            style={{
+              backgroundColor: compareMode ? '#c73a3a' : '#3d3d3d',
+              color: compareMode ? '#ffffff' : '#888888'
+            }}
+            title={compareMode ? 'Compare mode ON (click to exit)' : 'Compare mode OFF (click to enter)'}
+          >
+            <GitCompare size={13} />
+          </button>
+
           {/* Scroll Sync Toggle - hidden on mobile, only visible when both panels at top */}
           <button
             onClick={onToggleScrollSync}
