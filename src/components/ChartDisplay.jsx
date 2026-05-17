@@ -240,11 +240,11 @@ export default function ChartDisplay({ chart, index = 0 }) {
   };
 
   return (
-    <div 
+    <div
       className="rounded-2xl p-5 animate-scaleIn transition-all duration-300 hover:shadow-xl"
-      style={{ 
-        backgroundColor: '#252525', 
-        border: '1px solid #3d3d3d',
+      style={{
+        backgroundColor: '#252525',
+        border: `1px solid ${chart.color}`,
         animationDelay: `${index * 100}ms`
       }}
     >
