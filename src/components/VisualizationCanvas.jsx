@@ -3,6 +3,7 @@ import { useCharts } from '../context/ChartContext';
 import ChartDisplay from './ChartDisplay';
 import ChartComparison from './ChartComparison';
 import { Plus } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 const VisualizationCanvas = forwardRef(function VisualizationCanvas({ 
   analysisTitle, 
@@ -149,17 +150,18 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
               autoFocus
             />
           ) : (
-            <h2 
-              className="text-xl sm:text-2xl font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100"
-              style={{ color: '#c73a3a' }}
-              onClick={() => {
-                setTitleInput(analysisTitle);
-                setIsEditingTitle(true);
-              }}
-              title="Click to edit title"
-            >
-              {analysisTitle || 'Untitled Analysis'}
-            </h2>
+            <Tooltip content="Click to edit title" accentColor="#c73a3a">
+              <h2
+                className="text-xl sm:text-2xl font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100"
+                style={{ color: '#c73a3a' }}
+                onClick={() => {
+                  setTitleInput(analysisTitle);
+                  setIsEditingTitle(true);
+                }}
+              >
+                {analysisTitle || 'Untitled Analysis'}
+              </h2>
+            </Tooltip>
           )}
           {isEditingDesc ? (
             <input
@@ -173,17 +175,18 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
               autoFocus
             />
           ) : (
-            <p 
-              className="text-sm mt-1 cursor-pointer transition-all duration-200 hover:text-gray-300"
-              style={{ color: '#888888' }}
-              onClick={() => {
-                setDescInput(analysisDescription);
-                setIsEditingDesc(true);
-              }}
-              title="Click to edit description"
-            >
-              {analysisDescription}
-            </p>
+            <Tooltip content="Click to edit description" accentColor="#c73a3a">
+              <p
+                className="text-sm mt-1 cursor-pointer transition-all duration-200 hover:text-gray-300"
+                style={{ color: '#888888' }}
+                onClick={() => {
+                  setDescInput(analysisDescription);
+                  setIsEditingDesc(true);
+                }}
+              >
+                {analysisDescription}
+              </p>
+            </Tooltip>
           )}
         </div>
         <img 

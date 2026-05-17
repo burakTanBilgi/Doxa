@@ -2,12 +2,13 @@ import { useMemo, useState } from 'react';
 import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
-  ResponsiveContainer, Tooltip
+  ResponsiveContainer, Tooltip as RechartsTooltip
 } from 'recharts';
 import { useCharts } from '../context/ChartContext';
 import { buildComparisonView } from '../utils/compareCompatibility';
 import { sortedComparisonView } from '../utils/sortViews';
 import { AGGREGATE_BY_KEY, formatAggregate } from '../utils/aggregates';
+import Tooltip from './Tooltip';
 
 const DEFAULT_ACCENT = '#c73a3a';
 
@@ -49,14 +50,15 @@ export default function ChartComparison({ comparison }) {
             autoFocus
           />
         ) : (
-          <h3
-            className="text-sm font-semibold uppercase tracking-wider cursor-pointer hover:scale-[1.02] transition-transform"
-            style={{ color: accent }}
-            onClick={() => { setTitleInput(comparison.title); setIsEditingTitle(true); }}
-            title="Click to rename comparison"
-          >
-            {comparison.title}
-          </h3>
+          <Tooltip content="Click to rename comparison" accentColor={accent}>
+            <h3
+              className="text-sm font-semibold uppercase tracking-wider cursor-pointer hover:scale-[1.02] transition-transform"
+              style={{ color: accent }}
+              onClick={() => { setTitleInput(comparison.title); setIsEditingTitle(true); }}
+            >
+              {comparison.title}
+            </h3>
+          </Tooltip>
         )}
       </div>
       {comparison.description && (
@@ -125,7 +127,7 @@ function RadarOverlay({ view }) {
               strokeWidth={2}
             />
           ))}
-          <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d', color: '#d0d0d0' }} />
+          <RechartsTooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d', color: '#d0d0d0' }} />
         </RadarChart>
       </ResponsiveContainer>
     </div>
@@ -158,7 +160,7 @@ function ScatterOverlay({ view }) {
             tick={{ fill: '#888', fontSize: 10 }}
             stroke="#3d3d3d"
           />
-          <Tooltip
+          <RechartsTooltip
             cursor={{ strokeDasharray: '3 3' }}
             contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d', color: '#d0d0d0' }}
           />

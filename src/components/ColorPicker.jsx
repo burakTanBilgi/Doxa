@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, Pipette } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 // Curated dusky palette — matches the hue ranges in ChartContext.generateDuskyColor
 // (reds, terracotta, teals/slates, dusty purples, deep roses). Hand-picked so the
@@ -144,11 +145,12 @@ export default function ColorPicker({ value, onChange, accentColor, children }) 
               <Pipette size={12} style={{ color: accent }} />
               Custom...
             </button>
-            <span
-              className="w-5 h-5 rounded-full border border-white/10"
-              style={{ backgroundColor: value }}
-              title={value}
-            />
+            <Tooltip content={value} accentColor={value}>
+              <span
+                className="w-5 h-5 rounded-full border border-white/10 inline-block"
+                style={{ backgroundColor: value }}
+              />
+            </Tooltip>
             <input
               ref={nativeRef}
               type="color"

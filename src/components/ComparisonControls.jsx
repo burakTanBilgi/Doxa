@@ -227,14 +227,15 @@ export default function ComparisonControls({ comparison }) {
               autoFocus
             />
           ) : (
-            <h4
-              className="font-medium text-sm cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 truncate"
-              style={{ color: '#d0d0d0' }}
-              onClick={() => setIsEditingTitle(true)}
-              title="Click to edit"
-            >
-              {comparison.title}
-            </h4>
+            <Tooltip content="Click to edit comparison title" accentColor={accent}>
+              <h4
+                className="font-medium text-sm cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 truncate"
+                style={{ color: '#d0d0d0' }}
+                onClick={() => setIsEditingTitle(true)}
+              >
+                {comparison.title}
+              </h4>
+            </Tooltip>
           )}
         </div>
         <div className="flex items-center gap-1">
@@ -389,53 +390,60 @@ export default function ComparisonControls({ comparison }) {
                   disabled={!canSwap}
                   isBaselineSlot={isFirst}
                 />
-                <button
-                  onClick={() => moveSlot(slotIndex, -1)}
-                  disabled={isFirst || slotSortActive}
-                  className="p-1 rounded transition-all hover:scale-110 active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed"
-                  style={{ color: '#888888' }}
-                  title={moveTitle || 'Move up'}
-                >
-                  <ArrowUp size={12} />
-                </button>
-                <button
-                  onClick={() => moveSlot(slotIndex, 1)}
-                  disabled={isLast || slotSortActive}
-                  className="p-1 rounded transition-all hover:scale-110 active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed"
-                  style={{ color: '#888888' }}
-                  title={moveTitle || 'Move down'}
-                >
-                  <ArrowDown size={12} />
-                </button>
-                <button
-                  onClick={() => removeSlot(slotIndex)}
-                  className="p-1 rounded transition-all hover:scale-110 active:scale-90"
-                  style={{ color: '#888888' }}
-                  title="Remove from comparison"
-                >
-                  <X size={12} />
-                </button>
+                <Tooltip content={moveTitle || 'Move up'} accentColor={accent}>
+                  <button
+                    onClick={() => moveSlot(slotIndex, -1)}
+                    disabled={isFirst || slotSortActive}
+                    className="p-1 rounded transition-all hover:scale-110 active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{ color: '#888888' }}
+                  >
+                    <ArrowUp size={12} />
+                  </button>
+                </Tooltip>
+                <Tooltip content={moveTitle || 'Move down'} accentColor={accent}>
+                  <button
+                    onClick={() => moveSlot(slotIndex, 1)}
+                    disabled={isLast || slotSortActive}
+                    className="p-1 rounded transition-all hover:scale-110 active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{ color: '#888888' }}
+                  >
+                    <ArrowDown size={12} />
+                  </button>
+                </Tooltip>
+                <Tooltip content="Remove from comparison" accentColor={accent}>
+                  <button
+                    onClick={() => removeSlot(slotIndex)}
+                    className="p-1 rounded transition-all hover:scale-110 active:scale-90"
+                    style={{ color: '#888888' }}
+                  >
+                    <X size={12} />
+                  </button>
+                </Tooltip>
               </div>
             );
           })}
         </div>
 
-        <button
-          onClick={addSlot}
-          disabled={!canAddSlot}
-          className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{
-            backgroundColor: '#3d3d3d',
-            color: '#d0d0d0',
-            border: '1px dashed #555555',
-          }}
-          title={canAddSlot
+        <Tooltip
+          content={canAddSlot
             ? 'Add a chart to this comparison'
             : (baseline ? 'No more charts compatible with the baseline' : 'No charts available')}
+          accentColor={accent}
         >
-          <Plus size={12} />
-          Add chart
-        </button>
+          <button
+            onClick={addSlot}
+            disabled={!canAddSlot}
+            className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: '#3d3d3d',
+              color: '#d0d0d0',
+              border: '1px dashed #555555',
+            }}
+          >
+            <Plus size={12} />
+            Add chart
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

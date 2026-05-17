@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import Tooltip from './Tooltip';
 
 // Italic-text description with a controlled inline editor.
 //
@@ -85,14 +86,15 @@ export default function EditableDescription({
   if (!value) return null;
 
   return (
-    <p
-      onClick={() => onEditingChange(true)}
-      onMouseDown={(e) => e.stopPropagation()}
-      className={`text-xs italic cursor-pointer hover:opacity-80 transition-opacity ${className}`}
-      style={{ color: '#888888', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
-      title="Click to edit description"
-    >
-      {value}
-    </p>
+    <Tooltip content="Click to edit description" accentColor={accentColor}>
+      <p
+        onClick={() => onEditingChange(true)}
+        onMouseDown={(e) => e.stopPropagation()}
+        className={`text-xs italic cursor-pointer hover:opacity-80 transition-opacity ${className}`}
+        style={{ color: '#888888', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+      >
+        {value}
+      </p>
+    </Tooltip>
   );
 }

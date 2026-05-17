@@ -6,7 +6,7 @@ import {
   PolarRadiusAxis,
   Radar,
   ResponsiveContainer,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ScatterChart,
   Scatter,
   XAxis,
@@ -17,6 +17,7 @@ import {
 } from 'recharts';
 import { useCharts } from '../context/ChartContext';
 import { sortedChartData } from '../utils/sortViews';
+import Tooltip from './Tooltip';
 
 function TwoFieldChart({ chart, onEditField }) {
   const scatterData = [{
@@ -86,7 +87,7 @@ function TwoFieldChart({ chart, onEditField }) {
           axisLine={{ stroke: '#4d4d4d' }}
           label={<CustomYLabel />}
         />
-        <Tooltip
+        <RechartsTooltip
           contentStyle={{
             backgroundColor: '#2d2d2d',
             border: '1px solid #4d4d4d',
@@ -190,7 +191,7 @@ function RadarChartDisplay({ chart, traitCount, onLabelClick }) {
           animationDuration={500}
           animationEasing="ease-out"
         />
-        <Tooltip
+        <RechartsTooltip
           contentStyle={{
             backgroundColor: '#2d2d2d',
             border: '1px solid #4d4d4d',
@@ -260,17 +261,18 @@ export default function ChartDisplay({ chart, index = 0 }) {
           autoFocus
         />
       ) : (
-        <h3
-          className="text-base font-semibold text-center transition-all cursor-pointer hover:scale-105"
-          style={{ color: '#d0d0d0' }}
-          onClick={() => {
-            setTitleInput(chart.title);
-            setIsEditingTitle(true);
-          }}
-          title="Click to edit"
-        >
-          {chart.title}
-        </h3>
+        <Tooltip content="Click to edit chart title" accentColor={chart.color}>
+          <h3
+            className="text-base font-semibold text-center transition-all cursor-pointer hover:scale-105"
+            style={{ color: '#d0d0d0' }}
+            onClick={() => {
+              setTitleInput(chart.title);
+              setIsEditingTitle(true);
+            }}
+          >
+            {chart.title}
+          </h3>
+        </Tooltip>
       )}
       {chart.description && (
         <p

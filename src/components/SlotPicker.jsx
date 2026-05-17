@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 // Props:
 //   value             — currently selected chartId
@@ -55,32 +56,38 @@ export default function SlotPicker({ value, compatibleCharts, chosenIds, onChang
   // only option" rather than an unclickable control.
   if (disabled) {
     return (
-      <div
-        className="flex-1 min-w-0 text-xs px-2 py-1 rounded-md truncate"
-        style={{ backgroundColor: '#3d3d3d', color: '#d0d0d0', opacity: 0.8 }}
-        title="No other charts share these trait names"
-      >
-        {current?.title ?? '—'}
-      </div>
+      <Tooltip content="No other charts share these trait names" accentColor={current?.color}>
+        <div
+          className="flex-1 min-w-0 text-xs px-2 py-1 rounded-md truncate"
+          style={{ backgroundColor: '#3d3d3d', color: '#d0d0d0', opacity: 0.8 }}
+        >
+          {current?.title ?? '—'}
+        </div>
+      </Tooltip>
     );
   }
 
   return (
     <div ref={wrapRef} className="relative flex-1 min-w-0">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between gap-1.5 text-xs px-2 py-1 rounded-md focus:outline-none truncate"
-        style={{
-          backgroundColor: '#3d3d3d',
-          color: '#d0d0d0',
-          border: 'none',
-          cursor: 'pointer',
-        }}
-        title={isBaselineSlot ? 'Baseline (defines compatibility)' : 'Compatible chart'}
+      <Tooltip
+        content={isBaselineSlot ? 'Baseline (defines compatibility)' : 'Compatible chart'}
+        accentColor={current?.color}
+        disabled={open}
       >
-        <span className="truncate">{current?.title ?? '—'}</span>
-        <ChevronDown size={11} style={{ flexShrink: 0, opacity: 0.6 }} />
-      </button>
+        <button
+          onClick={() => setOpen(o => !o)}
+          className="w-full flex items-center justify-between gap-1.5 text-xs px-2 py-1 rounded-md focus:outline-none truncate"
+          style={{
+            backgroundColor: '#3d3d3d',
+            color: '#d0d0d0',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          <span className="truncate">{current?.title ?? '—'}</span>
+          <ChevronDown size={11} style={{ flexShrink: 0, opacity: 0.6 }} />
+        </button>
+      </Tooltip>
 
       {open && createPortal(
         <div
@@ -130,20 +137,20 @@ export default function SlotPicker({ value, compatibleCharts, chosenIds, onChang
                 In this comparison
               </div>
               {inComparison.map(c => (
+                <Tooltip key={c.id} content="Already in this comparison" accentColor={c.color}>
                 <div
-                  key={c.id}
                   className="w-full flex items-center gap-2 px-2 py-1.5 text-xs italic"
                   style={{
                     color: '#888888',
                     backgroundColor: '#252525',
                     cursor: 'not-allowed',
                   }}
-                  title="Already in this comparison"
                 >
                   <span style={{ width: 12 }} />
                   <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: c.color, opacity: 0.6 }} />
                   <span className="truncate">{c.title}</span>
                 </div>
+                </Tooltip>
               ))}
             </div>
           )}

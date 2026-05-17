@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Sigma, Check } from 'lucide-react';
 import { AGGREGATES } from '../utils/aggregates';
+import Tooltip from './Tooltip';
 
 // Σ popover for a comparison: toggle the Δ column, plus per-stat checkboxes
 // to add aggregate columns (per-trait across charts) and rows (per-chart
@@ -63,41 +64,42 @@ export default function StatsMenu({
   }, [open]);
 
   const renderCheckRow = (label, checked, onToggle, disabled, titleAttr) => (
-    <button
-      key={label}
-      onClick={() => { if (!disabled) onToggle(); }}
-      disabled={disabled}
-      title={titleAttr}
-      className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5"
-      style={{ color: checked ? accentColor : '#d0d0d0', fontWeight: checked ? 600 : 400 }}
-    >
-      <span
-        className="inline-flex items-center justify-center"
-        style={{
-          width: 12, height: 12, borderRadius: 2,
-          border: `1px solid ${checked ? accentColor : '#555555'}`,
-          background: checked ? accentColor : 'transparent',
-        }}
+    <Tooltip key={label} content={titleAttr || ''} accentColor={accentColor} disabled={!titleAttr}>
+      <button
+        onClick={() => { if (!disabled) onToggle(); }}
+        disabled={disabled}
+        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/5"
+        style={{ color: checked ? accentColor : '#d0d0d0', fontWeight: checked ? 600 : 400 }}
       >
-        {checked && <Check size={9} style={{ color: '#fff' }} />}
-      </span>
-      {label}
-    </button>
+        <span
+          className="inline-flex items-center justify-center"
+          style={{
+            width: 12, height: 12, borderRadius: 2,
+            border: `1px solid ${checked ? accentColor : '#555555'}`,
+            background: checked ? accentColor : 'transparent',
+          }}
+        >
+          {checked && <Check size={9} style={{ color: '#fff' }} />}
+        </span>
+        {label}
+      </button>
+    </Tooltip>
   );
 
   return (
     <div ref={wrapRef} className="relative">
-      <button
-        onClick={() => setOpen(o => !o)}
-        onMouseDown={(e) => e.stopPropagation()}
-        className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
-        style={{ color: accentColor, backgroundColor: open ? accentColor + '20' : 'transparent' }}
-        onMouseEnter={(e) => { if (!open) e.currentTarget.style.backgroundColor = accentColor + '20'; }}
-        onMouseLeave={(e) => { if (!open) e.currentTarget.style.backgroundColor = 'transparent'; }}
-        title="Aggregate stats"
-      >
-        <Sigma size={16} />
-      </button>
+      <Tooltip content="Aggregate stats" accentColor={accentColor} disabled={open}>
+        <button
+          onClick={() => setOpen(o => !o)}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
+          style={{ color: accentColor, backgroundColor: open ? accentColor + '20' : 'transparent' }}
+          onMouseEnter={(e) => { if (!open) e.currentTarget.style.backgroundColor = accentColor + '20'; }}
+          onMouseLeave={(e) => { if (!open) e.currentTarget.style.backgroundColor = 'transparent'; }}
+        >
+          <Sigma size={16} />
+        </button>
+      </Tooltip>
       {open && createPortal(
         <div
           ref={popRef}

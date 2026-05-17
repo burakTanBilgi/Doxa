@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowUpDown, Check } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 // Props:
 //   accentColor      — color used for the active row highlight and the button hover tint
@@ -77,17 +78,18 @@ export default function SortMenu({ accentColor = '#c73a3a', modes, current, onSe
 
   return (
     <div ref={wrapRef} className="relative">
-      <button
-        onClick={() => setOpen(o => !o)}
-        onMouseDown={(e) => e.stopPropagation()}
-        className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
-        style={{ color: accentColor, backgroundColor: open ? accentColor + '20' : 'transparent' }}
-        onMouseEnter={(e) => { if (!open) e.currentTarget.style.backgroundColor = accentColor + '20'; }}
-        onMouseLeave={(e) => { if (!open) e.currentTarget.style.backgroundColor = 'transparent'; }}
-        title={title}
-      >
-        <ArrowUpDown size={16} />
-      </button>
+      <Tooltip content={title} accentColor={accentColor} disabled={open}>
+        <button
+          onClick={() => setOpen(o => !o)}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
+          style={{ color: accentColor, backgroundColor: open ? accentColor + '20' : 'transparent' }}
+          onMouseEnter={(e) => { if (!open) e.currentTarget.style.backgroundColor = accentColor + '20'; }}
+          onMouseLeave={(e) => { if (!open) e.currentTarget.style.backgroundColor = 'transparent'; }}
+        >
+          <ArrowUpDown size={16} />
+        </button>
+      </Tooltip>
       {open && createPortal(
         <div
           ref={popRef}
