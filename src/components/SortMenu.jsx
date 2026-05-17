@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowUpDown, Check } from 'lucide-react';
 
 // Props:
@@ -11,12 +12,34 @@ import { ArrowUpDown, Check } from 'lucide-react';
 //   title            — button hover tooltip
 export default function SortMenu({ accentColor = '#c73a3a', modes, current, onSelect, sections, title = 'Sort' }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, right: 0 });
   const wrapRef = useRef(null);
+  const popRef = useRef(null);
+
+  // Place the popover at fixed viewport coordinates so it escapes any
+  // ancestor's stacking context (the parent card uses `transform`, which
+  // would otherwise pin z-index inside the card).
+  useLayoutEffect(() => {
+    if (!open || !wrapRef.current) return;
+    const updatePos = () => {
+      const rect = wrapRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    };
+    updatePos();
+    window.addEventListener('scroll', updatePos, true);
+    window.addEventListener('resize', updatePos);
+    return () => {
+      window.removeEventListener('scroll', updatePos, true);
+      window.removeEventListener('resize', updatePos);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const handleClick = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+      const insideTrigger = wrapRef.current && wrapRef.current.contains(e.target);
+      const insidePopover = popRef.current && popRef.current.contains(e.target);
+      if (!insideTrigger && !insidePopover) setOpen(false);
     };
     const handleEsc = (e) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('mousedown', handleClick);
@@ -65,10 +88,19 @@ export default function SortMenu({ accentColor = '#c73a3a', modes, current, onSe
       >
         <ArrowUpDown size={16} />
       </button>
-      {open && (
+      {open && createPortal(
         <div
-          className="absolute right-0 top-full mt-1 rounded-lg overflow-hidden shadow-xl z-50"
-          style={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', minWidth: 200 }}
+          ref={popRef}
+          className="rounded-lg overflow-hidden shadow-xl"
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            right: pos.right,
+            backgroundColor: '#2d2d2d',
+            border: '1px solid #3d3d3d',
+            minWidth: 200,
+            zIndex: 9999,
+          }}
         >
           {sections ? (
             sections.map((section, i) => (
@@ -82,7 +114,8 @@ export default function SortMenu({ accentColor = '#c73a3a', modes, current, onSe
           ) : (
             renderModes(modes, current, onSelect)
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

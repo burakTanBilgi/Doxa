@@ -1,24 +1,29 @@
 import { useEffect, useRef, useState } from 'react';
 
-// Inline-editable italic description. Empty state: a faint "+ description" affordance
-// the user can click to start typing. Click an existing description to edit it.
+// Italic-text description with a controlled inline editor.
+//
+// Empty + not editing → renders nothing (the parent owns the "Add description"
+// trigger button and decides where it lives).
+// Set + not editing   → italic gray line. Click to edit.
+// Editing             → input. Save on blur/Enter. Cancel on Escape.
 //
 // Props:
-//   value          — current description string (may be empty/undefined)
-//   onChange(str)  — called with the new value on blur or Enter
-//   accentColor    — color used for the focused border
-//   placeholder    — placeholder text in edit mode
-//   addLabel       — text shown when there's no value yet (default "+ description")
-//   className      — additional classes for the wrapper
+//   value             — current description (may be undefined/empty)
+//   onChange(str)     — fires with trimmed value on save
+//   editing           — controlled flag; parent owns it
+//   onEditingChange(b)— fires when the editor opens/closes from inside
+//   accentColor       — border tint of the input
+//   placeholder       — input placeholder
+//   className         — passed through to wrapper
 export default function EditableDescription({
   value,
   onChange,
+  editing,
+  onEditingChange,
   accentColor = '#c73a3a',
   placeholder = 'Description...',
-  addLabel = '+ description',
   className = '',
 }) {
-  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value || '');
   const inputRef = useRef(null);
 
@@ -28,12 +33,12 @@ export default function EditableDescription({
   const save = () => {
     const trimmed = draft.trim();
     if (trimmed !== (value || '')) onChange(trimmed);
-    setEditing(false);
+    onEditingChange(false);
   };
 
   const cancel = () => {
     setDraft(value || '');
-    setEditing(false);
+    onEditingChange(false);
   };
 
   if (editing) {
@@ -56,23 +61,11 @@ export default function EditableDescription({
     );
   }
 
-  if (!value) {
-    return (
-      <button
-        onClick={() => setEditing(true)}
-        onMouseDown={(e) => e.stopPropagation()}
-        className={`text-[10px] italic opacity-40 hover:opacity-80 transition-opacity text-left ${className}`}
-        style={{ color: '#888888' }}
-        title="Add a description"
-      >
-        {addLabel}
-      </button>
-    );
-  }
+  if (!value) return null;
 
   return (
     <p
-      onClick={() => setEditing(true)}
+      onClick={() => onEditingChange(true)}
       onMouseDown={(e) => e.stopPropagation()}
       className={`text-xs italic cursor-pointer hover:opacity-80 transition-opacity ${className}`}
       style={{ color: '#888888' }}

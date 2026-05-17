@@ -7,6 +7,7 @@ import {
 import { useCharts } from '../context/ChartContext';
 import { buildComparisonView } from '../utils/compareCompatibility';
 import { sortedComparisonView } from '../utils/sortViews';
+import { AGGREGATE_BY_KEY, formatAggregate } from '../utils/aggregates';
 
 const ACCENT = '#c73a3a';
 
@@ -15,14 +16,14 @@ export default function ChartComparison({ comparison }) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(comparison.title);
 
-  const view = useMemo(
-    () => sortedComparisonView(
-      buildComparisonView(charts, comparison.chartIds),
-      comparison.slotSortMode,
-      comparison.rowSortMode,
-    ),
-    [charts, comparison.chartIds, comparison.slotSortMode, comparison.rowSortMode]
-  );
+  const view = useMemo(() => {
+    const raw = buildComparisonView(charts, comparison.chartIds);
+    if (!raw) return null;
+    // Honor the per-comparison "show Δ" toggle by clearing deltaPair when off,
+    // so the delta-* row sort mode and the Δ column both fall back cleanly.
+    const gated = comparison.showDelta === false ? { ...raw, deltaPair: null } : raw;
+    return sortedComparisonView(gated, comparison.slotSortMode, comparison.rowSortMode);
+  }, [charts, comparison.chartIds, comparison.slotSortMode, comparison.rowSortMode, comparison.showDelta]);
 
   const handleTitleSave = () => {
     if (titleInput.trim()) updateComparisonTitle(comparison.id, titleInput.trim());
@@ -84,7 +85,11 @@ export default function ChartComparison({ comparison }) {
 
           {view.chartType === 'radar' ? <RadarOverlay view={view} /> : <ScatterOverlay view={view} />}
 
-          <DeltaTable view={view} />
+          <DeltaTable
+            view={view}
+            aggregateColumns={comparison.aggregateColumns || []}
+            aggregateRows={comparison.aggregateRows || []}
+          />
         </>
       )}
     </div>
@@ -167,7 +172,7 @@ function ScatterOverlay({ view }) {
   );
 }
 
-function DeltaTable({ view }) {
+function DeltaTable({ view, aggregateColumns = [], aggregateRows = [] }) {
   const showDelta = view.deltaPair != null;
   const aId = view.deltaPair?.a;
   const bId = view.deltaPair?.b;
@@ -176,6 +181,13 @@ function DeltaTable({ view }) {
     const s = view.series.find(x => x.chartId === chartId);
     return s?.valuesByTrait[trait] ?? 0;
   };
+
+  const colAggs = aggregateColumns
+    .map(k => AGGREGATE_BY_KEY[k])
+    .filter(Boolean);
+  const rowAggs = aggregateRows
+    .map(k => AGGREGATE_BY_KEY[k])
+    .filter(Boolean);
 
   return (
     <table className="w-full mt-4 text-xs" style={{ color: '#d0d0d0', borderCollapse: 'collapse' }}>
@@ -187,6 +199,11 @@ function DeltaTable({ view }) {
               {s.title}
             </th>
           ))}
+          {colAggs.map(agg => (
+            <th key={agg.key} className="text-right py-2 px-2 italic" style={{ color: '#888888', fontWeight: 600 }}>
+              {agg.label}
+            </th>
+          ))}
           {showDelta && (
             <th className="text-right py-2 px-2" style={{ color: '#888888', fontWeight: 600 }}>Δ</th>
           )}
@@ -195,6 +212,7 @@ function DeltaTable({ view }) {
       <tbody>
         {view.traitOrder.map(trait => {
           const delta = showDelta ? getValue(bId, trait) - getValue(aId, trait) : null;
+          const rowValues = view.series.map(s => getValue(s.chartId, trait));
           return (
             <tr key={trait} style={{ borderBottom: '1px solid #2a2a2a' }}>
               <td className="py-1.5 px-2">{trait}</td>
@@ -203,9 +221,46 @@ function DeltaTable({ view }) {
                   {getValue(s.chartId, trait)}
                 </td>
               ))}
+              {colAggs.map(agg => (
+                <td key={agg.key} className="text-right py-1.5 px-2 tabular-nums italic" style={{ color: '#a0a0a0' }}>
+                  {formatAggregate(agg.compute(rowValues))}
+                </td>
+              ))}
               {showDelta && (
                 <td className="text-right py-1.5 px-2 tabular-nums" style={{ color: delta > 0 ? '#6bbf6b' : delta < 0 ? '#c73a3a' : '#888888' }}>
                   {delta > 0 ? `+${delta}` : delta}
+                </td>
+              )}
+            </tr>
+          );
+        })}
+        {rowAggs.map(agg => {
+          const seriesValues = view.series.map(s =>
+            view.traitOrder.map(t => s.valuesByTrait[t] ?? 0)
+          );
+          const colValues = (chartIdx) => seriesValues[chartIdx];
+          const allValues = seriesValues.flat();
+          return (
+            <tr key={`agg-row-${agg.key}`} style={{ borderTop: '1px solid #3d3d3d', backgroundColor: '#252525' }}>
+              <td className="py-1.5 px-2 italic" style={{ color: '#888888', fontWeight: 600 }}>{agg.label}</td>
+              {view.series.map((s, i) => (
+                <td key={s.chartId} className="text-right py-1.5 px-2 tabular-nums italic" style={{ color: '#a0a0a0' }}>
+                  {formatAggregate(agg.compute(colValues(i)))}
+                </td>
+              ))}
+              {colAggs.map(colAgg => (
+                <td key={colAgg.key} className="text-right py-1.5 px-2 tabular-nums italic" style={{ color: '#666666' }}>
+                  {formatAggregate(agg.compute(allValues))}
+                </td>
+              ))}
+              {showDelta && (
+                <td className="text-right py-1.5 px-2 tabular-nums italic" style={{ color: '#666666' }}>
+                  {(() => {
+                    const aVals = view.traitOrder.map(t => getValue(aId, t));
+                    const bVals = view.traitOrder.map(t => getValue(bId, t));
+                    const d = agg.compute(bVals) - agg.compute(aVals);
+                    return formatAggregate(d);
+                  })()}
                 </td>
               )}
             </tr>

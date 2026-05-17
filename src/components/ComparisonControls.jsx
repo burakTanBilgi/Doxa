@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Trash2, Copy, GitCompareArrows, Plus, X, ArrowUp, ArrowDown, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Copy, GitCompareArrows, Plus, X, ArrowUp, ArrowDown, GripVertical, AlignLeft } from 'lucide-react';
 import { useCharts } from '../context/ChartContext';
 import { areCompatible } from '../utils/compareCompatibility';
 import SortMenu from './SortMenu';
+import StatsMenu from './StatsMenu';
 import SlotPicker from './SlotPicker';
 import EditableDescription from './EditableDescription';
 
@@ -34,6 +35,8 @@ export default function ComparisonControls({ comparison }) {
     setComparisonSlotSortMode,
     setComparisonRowSortMode,
     updateComparisonDescription,
+    setComparisonShowDelta,
+    toggleComparisonAggregate,
   } = useCharts();
 
   const slotSortMode = comparison.slotSortMode || 'custom';
@@ -46,6 +49,7 @@ export default function ComparisonControls({ comparison }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [draggedSlot, setDraggedSlot] = useState(null);
   const [dragOverSlot, setDragOverSlot] = useState(null);
+  const [descEditing, setDescEditing] = useState(false);
 
   const handleTitleSave = () => {
     if (titleInput.trim()) {
@@ -214,6 +218,18 @@ export default function ComparisonControls({ comparison }) {
           )}
         </div>
         <div className="flex items-center gap-1">
+          {!comparison.description && (
+            <button
+              onClick={() => setDescEditing(true)}
+              className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
+              style={{ color: ACCENT, backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = ACCENT + '20'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              title="Add a description"
+            >
+              <AlignLeft size={16} />
+            </button>
+          )}
           <SortMenu
             accentColor={ACCENT}
             title="Sort"
@@ -231,6 +247,16 @@ export default function ComparisonControls({ comparison }) {
                 onSelect: (m) => setComparisonRowSortMode(comparison.id, m),
               },
             ]}
+          />
+          <StatsMenu
+            accentColor={ACCENT}
+            showDelta={comparison.showDelta !== false}
+            onShowDeltaChange={(v) => setComparisonShowDelta(comparison.id, v)}
+            deltaAvailable={comparison.chartIds.length === 2}
+            columnKeys={comparison.aggregateColumns || []}
+            rowKeys={comparison.aggregateRows || []}
+            onToggleColumn={(k) => toggleComparisonAggregate(comparison.id, 'columns', k)}
+            onToggleRow={(k) => toggleComparisonAggregate(comparison.id, 'rows', k)}
           />
           <button
             onClick={() => duplicateComparison(comparison.id)}
@@ -272,6 +298,8 @@ export default function ComparisonControls({ comparison }) {
           <EditableDescription
             value={comparison.description}
             onChange={(v) => updateComparisonDescription(comparison.id, v)}
+            editing={descEditing}
+            onEditingChange={setDescEditing}
             accentColor={ACCENT}
           />
         </div>

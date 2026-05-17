@@ -60,6 +60,9 @@ export function ChartProvider({ children }) {
         chartIds: [],
         slotSortMode: 'custom',
         rowSortMode: 'custom',
+        showDelta: true,
+        aggregateColumns: [],
+        aggregateRows: [],
       }];
     });
   };
@@ -94,6 +97,9 @@ export function ChartProvider({ children }) {
         chartIds: [...source.chartIds],
         slotSortMode: source.slotSortMode || 'custom',
         rowSortMode: source.rowSortMode || 'custom',
+        showDelta: source.showDelta !== false,
+        aggregateColumns: [...(source.aggregateColumns || [])],
+        aggregateRows: [...(source.aggregateRows || [])],
       };
       const next = [...prev];
       next.splice(idx + 1, 0, copy);
@@ -148,6 +154,22 @@ export function ChartProvider({ children }) {
 
   const updateComparisonDescription = (cmpId, description) => {
     setComparisons(prev => prev.map(c => c.id === cmpId ? { ...c, description } : c));
+  };
+
+  const setComparisonShowDelta = (cmpId, value) => {
+    setComparisons(prev => prev.map(c => c.id === cmpId ? { ...c, showDelta: !!value } : c));
+  };
+
+  const toggleComparisonAggregate = (cmpId, kind, key) => {
+    const field = kind === 'rows' ? 'aggregateRows' : 'aggregateColumns';
+    setComparisons(prev => prev.map(c => {
+      if (c.id !== cmpId) return c;
+      const current = c[field] || [];
+      const next = current.includes(key)
+        ? current.filter(k => k !== key)
+        : [...current, key];
+      return { ...c, [field]: next };
+    }));
   };
 
   const updateTraitDescription = (chartId, traitIndex, description) => {
@@ -386,6 +408,9 @@ export function ChartProvider({ children }) {
           chartIds: pruneSelection(newCharts, cmp.chartIds || []),
           slotSortMode: cmp.slotSortMode || 'custom',
           rowSortMode: cmp.rowSortMode || 'custom',
+          showDelta: cmp.showDelta !== false,
+          aggregateColumns: Array.isArray(cmp.aggregateColumns) ? cmp.aggregateColumns : [],
+          aggregateRows: Array.isArray(cmp.aggregateRows) ? cmp.aggregateRows : [],
         }))
         .filter(c => c.chartIds.length >= 1);
       setComparisons(pruned);
@@ -459,6 +484,8 @@ export function ChartProvider({ children }) {
         updateChartDescription,
         updateComparisonDescription,
         updateTraitDescription,
+        setComparisonShowDelta,
+        toggleComparisonAggregate,
       }}
     >
       {children}

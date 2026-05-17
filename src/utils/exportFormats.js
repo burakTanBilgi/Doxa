@@ -1,5 +1,6 @@
 import { sortedChartData, sortedComparisonView } from './sortViews';
 import { buildComparisonView } from './compareCompatibility';
+import { AGGREGATE_BY_KEY, formatAggregate } from './aggregates';
 
 /**
  * Export chart data as a downloadable JSON file.
@@ -29,6 +30,9 @@ export function exportAsJson(title, description, charts, comparisons = []) {
         .filter(idx => idx !== undefined),
       slotSortMode: c.slotSortMode || 'custom',
       rowSortMode: c.rowSortMode || 'custom',
+      showDelta: c.showDelta !== false,
+      aggregateColumns: c.aggregateColumns || [],
+      aggregateRows: c.aggregateRows || [],
     })),
   };
 
@@ -61,7 +65,9 @@ export function exportAsMarkdown(title, description, charts, comparisons = []) {
 
   for (const cmp of comparisons) {
     const rawView = buildComparisonView(charts, cmp.chartIds);
-    const view = sortedComparisonView(rawView, cmp.slotSortMode, cmp.rowSortMode);
+    if (!rawView) continue;
+    const gated = cmp.showDelta === false ? { ...rawView, deltaPair: null } : rawView;
+    const view = sortedComparisonView(gated, cmp.slotSortMode, cmp.rowSortMode);
     if (!view) continue;
 
     md += `## ${cmp.title || 'Comparison'}\n`;
@@ -69,18 +75,46 @@ export function exportAsMarkdown(title, description, charts, comparisons = []) {
 
     const titles = view.series.map(s => s.title);
     const showDelta = view.deltaPair != null;
-    md += `| Trait | ${titles.join(' | ')}${showDelta ? ' | Δ' : ''} |\n`;
-    md += `|-------|${view.series.map(() => '------').join('|')}${showDelta ? '|------' : ''}|\n`;
+    const colAggs = (cmp.aggregateColumns || []).map(k => AGGREGATE_BY_KEY[k]).filter(Boolean);
+    const rowAggs = (cmp.aggregateRows || []).map(k => AGGREGATE_BY_KEY[k]).filter(Boolean);
+    const colCount = view.series.length + colAggs.length + (showDelta ? 1 : 0);
+
+    const headerTail = [
+      ...titles,
+      ...colAggs.map(a => a.label),
+      ...(showDelta ? ['Δ'] : []),
+    ];
+    md += `| Trait | ${headerTail.join(' | ')} |\n`;
+    md += `|-------|${Array(colCount).fill('------').join('|')}|\n`;
+
     for (const trait of view.traitOrder) {
-      const values = view.series.map(s => s.valuesByTrait[trait] ?? '');
-      let row = `| ${trait} | ${values.join(' | ')}`;
+      const rowValues = view.series.map(s => s.valuesByTrait[trait] ?? 0);
+      const cells = [
+        ...rowValues,
+        ...colAggs.map(a => formatAggregate(a.compute(rowValues))),
+      ];
       if (showDelta) {
         const a = view.series.find(s => s.chartId === view.deltaPair.a).valuesByTrait[trait] ?? 0;
         const b = view.series.find(s => s.chartId === view.deltaPair.b).valuesByTrait[trait] ?? 0;
         const d = b - a;
-        row += ` | ${d > 0 ? `+${d}` : d}`;
+        cells.push(d > 0 ? `+${d}` : `${d}`);
       }
-      md += row + ' |\n';
+      md += `| ${trait} | ${cells.join(' | ')} |\n`;
+    }
+
+    for (const agg of rowAggs) {
+      const seriesValues = view.series.map(s => view.traitOrder.map(t => s.valuesByTrait[t] ?? 0));
+      const allValues = seriesValues.flat();
+      const perChart = seriesValues.map(vs => formatAggregate(agg.compute(vs)));
+      const perCol = colAggs.map(() => formatAggregate(agg.compute(allValues)));
+      let deltaCell = '';
+      if (showDelta) {
+        const aVals = view.traitOrder.map(t => view.series.find(s => s.chartId === view.deltaPair.a).valuesByTrait[t] ?? 0);
+        const bVals = view.traitOrder.map(t => view.series.find(s => s.chartId === view.deltaPair.b).valuesByTrait[t] ?? 0);
+        deltaCell = formatAggregate(agg.compute(bVals) - agg.compute(aVals));
+      }
+      const cells = [...perChart, ...perCol, ...(showDelta ? [deltaCell] : [])];
+      md += `| _${agg.label}_ | ${cells.join(' | ')} |\n`;
     }
     md += '\n';
   }
@@ -129,6 +163,9 @@ export function parseImportJson(text) {
             .filter(id => id !== undefined),
           slotSortMode: c.slotSortMode || 'custom',
           rowSortMode: c.rowSortMode || 'custom',
+          showDelta: c.showDelta !== false,
+          aggregateColumns: Array.isArray(c.aggregateColumns) ? c.aggregateColumns : [],
+          aggregateRows: Array.isArray(c.aggregateRows) ? c.aggregateRows : [],
         }))
         .filter(c => c.chartIds.length >= 1)
     : [];

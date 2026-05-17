@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useCharts } from '../context/ChartContext';
-import { Plus, Trash2, X, ChevronDown, ChevronUp, GripVertical, Lock, Unlock, Download, Upload, Image, FileJson, FileText, FileCode, Copy, GitCompareArrows } from 'lucide-react';
+import { Plus, Trash2, X, ChevronDown, ChevronUp, GripVertical, Lock, Unlock, Download, Upload, Image, FileJson, FileText, FileCode, Copy, GitCompareArrows, AlignLeft } from 'lucide-react';
 import { exportAsJson, exportAsMarkdown, parseImportJson } from '../utils/exportFormats';
 import { sortedChartData } from '../utils/sortViews';
 import ComparisonControls from './ComparisonControls';
 import SortMenu from './SortMenu';
 import EditableDescription from './EditableDescription';
+import useFlipReorder from '../hooks/useFlipReorder';
 
 const CHART_SORT_MODES = [
   { value: 'custom', label: 'Custom (drag order)' },
@@ -98,6 +99,7 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
   const [isBeingDragged, setIsBeingDragged] = useState(false);
   const [isDraggable, setIsDraggable] = useState(false);
   const [isSliderActive, setIsSliderActive] = useState(false);
+  const [descEditing, setDescEditing] = useState(false);
   const sliderRef = useRef(null);
 
   // Click outside to deactivate slider and enable dragging
@@ -194,7 +196,7 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
               autoFocus
             />
           ) : (
-            <label 
+            <label
               className="text-xs font-medium cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 interactive-text"
               style={{ color: '#b8b8b8' }}
               onClick={() => setIsEditing(true)}
@@ -203,6 +205,17 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
             >
               {trait.subject}
             </label>
+          )}
+          {!trait.description && (
+            <button
+              onClick={() => setDescEditing(true)}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="p-0.5 opacity-40 hover:opacity-100 transition-opacity rounded"
+              style={{ color: chart.color }}
+              title="Add a description"
+            >
+              <AlignLeft size={11} />
+            </button>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -253,6 +266,8 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
         <EditableDescription
           value={trait.description}
           onChange={(v) => updateTraitDescription(chart.id, index, v)}
+          editing={descEditing}
+          onEditingChange={setDescEditing}
           accentColor={chart.color}
           placeholder="Describe this trait..."
         />
@@ -266,6 +281,8 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
   const sortMode = chart.sortMode || 'custom';
   const isSorted = sortMode !== 'custom';
   const displayData = sortedChartData(chart);
+  const [descEditing, setDescEditing] = useState(false);
+  const registerFlip = useFlipReorder([chart.id, displayData.map(t => t.subject).join('|')]);
   const [newTraitName, setNewTraitName] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -513,6 +530,19 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
           )}
         </div>
         <div className="flex items-center gap-1">
+          {!chart.description && (
+            <button
+              onClick={() => setDescEditing(true)}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
+              style={{ color: chart.color, backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = chart.color + '20'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              title="Add a description"
+            >
+              <AlignLeft size={16} />
+            </button>
+          )}
           <SortMenu
             accentColor={chart.color}
             modes={CHART_SORT_MODES}
@@ -572,6 +602,8 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
           <EditableDescription
             value={chart.description}
             onChange={(v) => updateChartDescription(chart.id, v)}
+            editing={descEditing}
+            onEditingChange={setDescEditing}
             accentColor={chart.color}
           />
         </div>
@@ -590,18 +622,19 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
           {displayData.map((trait) => {
             const realIndex = chart.data.indexOf(trait);
             return (
-              <TraitField
-                key={`${chart.id}-${trait.subject}-${realIndex}`}
-                chart={chart}
-                trait={trait}
-                index={realIndex}
-                onDragStart={handleTraitDragStart}
-                onDragOver={handleTraitDragOver}
-                onDrop={handleTraitDrop}
-                isDragging={draggedTraitIndex === realIndex}
-                dragOverIndex={dragOverIndex}
-                sortLocked={isSorted}
-              />
+              <div key={`${chart.id}-${trait.subject}`} ref={registerFlip(trait.subject)}>
+                <TraitField
+                  chart={chart}
+                  trait={trait}
+                  index={realIndex}
+                  onDragStart={handleTraitDragStart}
+                  onDragOver={handleTraitDragOver}
+                  onDrop={handleTraitDrop}
+                  isDragging={draggedTraitIndex === realIndex}
+                  dragOverIndex={dragOverIndex}
+                  sortLocked={isSorted}
+                />
+              </div>
             );
           })}
         </div>
