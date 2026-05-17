@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 // Italic-text description with a controlled inline editor.
 //
@@ -28,7 +28,21 @@ export default function EditableDescription({
   const inputRef = useRef(null);
 
   useEffect(() => { if (!editing) setDraft(value || ''); }, [value, editing]);
-  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      // place caret at end
+      const len = inputRef.current.value.length;
+      inputRef.current.setSelectionRange(len, len);
+    }
+  }, [editing]);
+
+  // Auto-grow the textarea to fit content as the user types or content changes.
+  useLayoutEffect(() => {
+    if (!editing || !inputRef.current) return;
+    inputRef.current.style.height = 'auto';
+    inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
+  }, [draft, editing]);
 
   const save = () => {
     const trimmed = draft.trim();
@@ -43,20 +57,27 @@ export default function EditableDescription({
 
   if (editing) {
     return (
-      <input
+      <textarea
         ref={inputRef}
-        type="text"
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={save}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') save();
+          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); }
           else if (e.key === 'Escape') cancel();
         }}
         onMouseDown={(e) => e.stopPropagation()}
         placeholder={placeholder}
-        className={`w-full text-xs italic px-1.5 py-0.5 rounded focus:outline-none bg-transparent ${className}`}
-        style={{ color: '#b8b8b8', border: `1px solid ${accentColor}80` }}
+        rows={1}
+        className={`w-full text-xs italic px-1.5 py-0.5 rounded focus:outline-none bg-transparent resize-none overflow-hidden ${className}`}
+        style={{
+          color: '#b8b8b8',
+          border: `1px solid ${accentColor}80`,
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+          fontFamily: 'inherit',
+          lineHeight: 1.4,
+        }}
       />
     );
   }
@@ -68,7 +89,7 @@ export default function EditableDescription({
       onClick={() => onEditingChange(true)}
       onMouseDown={(e) => e.stopPropagation()}
       className={`text-xs italic cursor-pointer hover:opacity-80 transition-opacity ${className}`}
-      style={{ color: '#888888' }}
+      style={{ color: '#888888', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
       title="Click to edit description"
     >
       {value}

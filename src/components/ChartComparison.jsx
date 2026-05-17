@@ -9,12 +9,13 @@ import { buildComparisonView } from '../utils/compareCompatibility';
 import { sortedComparisonView } from '../utils/sortViews';
 import { AGGREGATE_BY_KEY, formatAggregate } from '../utils/aggregates';
 
-const ACCENT = '#c73a3a';
+const DEFAULT_ACCENT = '#c73a3a';
 
 export default function ChartComparison({ comparison }) {
   const { charts, updateComparisonTitle } = useCharts();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(comparison.title);
+  const accent = comparison.color || DEFAULT_ACCENT;
 
   const view = useMemo(() => {
     const raw = buildComparisonView(charts, comparison.chartIds);
@@ -33,7 +34,7 @@ export default function ChartComparison({ comparison }) {
   return (
     <div
       className="rounded-2xl p-4 mb-3"
-      style={{ backgroundColor: '#2d2d2d', border: `1px solid ${ACCENT}`, contain: 'layout style' }}
+      style={{ backgroundColor: '#2d2d2d', border: `1px solid ${accent}`, contain: 'layout style' }}
     >
       <div className="flex items-center justify-between mb-3">
         {isEditingTitle ? (
@@ -44,13 +45,13 @@ export default function ChartComparison({ comparison }) {
             onBlur={handleTitleSave}
             onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
             className="text-sm font-semibold uppercase tracking-wider bg-transparent border-b focus:outline-none flex-1"
-            style={{ color: ACCENT, borderColor: ACCENT }}
+            style={{ color: accent, borderColor: accent }}
             autoFocus
           />
         ) : (
           <h3
             className="text-sm font-semibold uppercase tracking-wider cursor-pointer hover:scale-[1.02] transition-transform"
-            style={{ color: ACCENT }}
+            style={{ color: accent }}
             onClick={() => { setTitleInput(comparison.title); setIsEditingTitle(true); }}
             title="Click to rename comparison"
           >
@@ -59,7 +60,10 @@ export default function ChartComparison({ comparison }) {
         )}
       </div>
       {comparison.description && (
-        <p className="text-xs italic mb-3 -mt-1" style={{ color: '#888888' }}>
+        <p
+          className="text-xs italic mb-3 -mt-1"
+          style={{ color: '#888888', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+        >
           {comparison.description}
         </p>
       )}

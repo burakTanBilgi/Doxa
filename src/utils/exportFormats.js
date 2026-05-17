@@ -25,6 +25,7 @@ export function exportAsJson(title, description, charts, comparisons = []) {
     comparisons: comparisons.map(c => ({
       title: c.title,
       description: c.description || '',
+      color: c.color || '#c73a3a',
       chartIndices: c.chartIds
         .map(id => idToIndex.get(id))
         .filter(idx => idx !== undefined),
@@ -163,6 +164,7 @@ export function parseImportJson(text) {
         .map((c, i) => ({
           title: c.title || `Comparison ${i + 1}`,
           description: c.description || '',
+          color: c.color || '#c73a3a',
           chartIds: (c.chartIndices || [])
             .map(idx => charts[idx]?.id)
             .filter(id => id !== undefined),

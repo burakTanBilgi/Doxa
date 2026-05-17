@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, ChevronDown } from 'lucide-react';
 
 // Props:
@@ -10,13 +11,32 @@ import { Check, ChevronDown } from 'lucide-react';
 //   isBaselineSlot    — first slot in the comparison; cosmetic only
 export default function SlotPicker({ value, compatibleCharts, chosenIds, onChange, disabled, isBaselineSlot }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
   const wrapRef = useRef(null);
+  const popRef = useRef(null);
   const current = compatibleCharts.find(c => c.id === value);
+
+  useLayoutEffect(() => {
+    if (!open || !wrapRef.current) return;
+    const updatePos = () => {
+      const rect = wrapRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    };
+    updatePos();
+    window.addEventListener('scroll', updatePos, true);
+    window.addEventListener('resize', updatePos);
+    return () => {
+      window.removeEventListener('scroll', updatePos, true);
+      window.removeEventListener('resize', updatePos);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const handleClick = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+      const insideTrigger = wrapRef.current && wrapRef.current.contains(e.target);
+      const insidePopover = popRef.current && popRef.current.contains(e.target);
+      if (!insideTrigger && !insidePopover) setOpen(false);
     };
     const handleEsc = (e) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('mousedown', handleClick);
@@ -62,10 +82,19 @@ export default function SlotPicker({ value, compatibleCharts, chosenIds, onChang
         <ChevronDown size={11} style={{ flexShrink: 0, opacity: 0.6 }} />
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
-          className="absolute left-0 right-0 top-full mt-1 rounded-lg overflow-hidden shadow-xl z-50 max-h-64 overflow-y-auto"
-          style={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d' }}
+          ref={popRef}
+          className="rounded-lg overflow-hidden shadow-xl max-h-64 overflow-y-auto"
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            left: pos.left,
+            width: pos.width,
+            backgroundColor: '#2d2d2d',
+            border: '1px solid #3d3d3d',
+            zIndex: 9999,
+          }}
         >
           {available.length > 0 && (
             <div>
@@ -118,7 +147,8 @@ export default function SlotPicker({ value, compatibleCharts, chosenIds, onChang
               ))}
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -37,11 +37,13 @@ export default function ComparisonControls({ comparison }) {
     updateComparisonDescription,
     setComparisonShowDelta,
     toggleComparisonAggregate,
+    updateComparisonColor,
   } = useCharts();
 
   const slotSortMode = comparison.slotSortMode || 'custom';
   const rowSortMode = comparison.rowSortMode || 'custom';
   const slotSortActive = slotSortMode !== 'custom';
+  const accent = comparison.color || ACCENT;
 
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -182,14 +184,22 @@ export default function ComparisonControls({ comparison }) {
       className={`relative rounded-2xl p-3 transition-all duration-300 ease-out`}
       style={{
         backgroundColor: '#1a1a1a',
-        border: `1px solid ${ACCENT}40`,
+        border: `1px solid ${accent}40`,
         opacity: isDeleting ? 0 : 1,
         transform: isDeleting ? 'scale(0.95)' : 'scale(1)',
       }}
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <GitCompareArrows size={16} style={{ color: ACCENT, flexShrink: 0 }} />
+          <input
+            type="color"
+            value={accent}
+            onChange={(e) => updateComparisonColor(comparison.id, e.target.value)}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="w-6 h-6 rounded-full cursor-pointer border-0 bg-transparent flex-shrink-0 transition-transform hover:scale-110"
+            title="Change comparison color"
+          />
+          <GitCompareArrows size={16} style={{ color: accent, flexShrink: 0 }} />
           {isEditingTitle ? (
             <input
               type="text"
@@ -201,8 +211,8 @@ export default function ComparisonControls({ comparison }) {
               style={{
                 backgroundColor: '#3d3d3d',
                 color: '#d0d0d0',
-                border: `1px solid ${ACCENT}`,
-                boxShadow: `0 0 0 2px ${ACCENT}30`
+                border: `1px solid ${accent}`,
+                boxShadow: `0 0 0 2px ${accent}30`
               }}
               autoFocus
             />
@@ -222,8 +232,8 @@ export default function ComparisonControls({ comparison }) {
             <button
               onClick={() => setDescEditing(true)}
               className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
-              style={{ color: ACCENT, backgroundColor: 'transparent' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = ACCENT + '20'}
+              style={{ color: accent, backgroundColor: 'transparent' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accent + '20'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
               title="Add a description"
             >
@@ -231,7 +241,7 @@ export default function ComparisonControls({ comparison }) {
             </button>
           )}
           <SortMenu
-            accentColor={ACCENT}
+            accentColor={accent}
             title="Sort"
             sections={[
               {
@@ -249,7 +259,7 @@ export default function ComparisonControls({ comparison }) {
             ]}
           />
           <StatsMenu
-            accentColor={ACCENT}
+            accentColor={accent}
             showDelta={comparison.showDelta === true}
             onShowDeltaChange={(v) => setComparisonShowDelta(comparison.id, v)}
             deltaAvailable={comparison.chartIds.length === 2}
@@ -261,8 +271,8 @@ export default function ComparisonControls({ comparison }) {
           <button
             onClick={() => duplicateComparison(comparison.id)}
             className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
-            style={{ color: ACCENT, backgroundColor: 'transparent' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = ACCENT + '20'}
+            style={{ color: accent, backgroundColor: 'transparent' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accent + '20'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             title="Duplicate comparison"
           >
@@ -271,8 +281,8 @@ export default function ComparisonControls({ comparison }) {
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
-            style={{ color: ACCENT, backgroundColor: 'transparent' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = ACCENT + '20'}
+            style={{ color: accent, backgroundColor: 'transparent' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accent + '20'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             title={isExpanded ? 'Collapse' : 'Expand'}
           >
@@ -281,8 +291,8 @@ export default function ComparisonControls({ comparison }) {
           <button
             onClick={handleDelete}
             className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
-            style={{ color: ACCENT, backgroundColor: 'transparent' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = ACCENT + '20'}
+            style={{ color: accent, backgroundColor: 'transparent' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = accent + '20'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             title="Delete comparison"
           >
@@ -300,7 +310,7 @@ export default function ComparisonControls({ comparison }) {
             onChange={(v) => updateComparisonDescription(comparison.id, v)}
             editing={descEditing}
             onEditingChange={setDescEditing}
-            accentColor={ACCENT}
+            accentColor={accent}
           />
         </div>
         <div className="space-y-1.5">
@@ -315,8 +325,9 @@ export default function ComparisonControls({ comparison }) {
             const compatible = compatibleFor(slotIndex);
             const isFirst = slotIndex === 0;
             const isLast = slotIndex === comparison.chartIds.length - 1;
-            const canSwap = compatible.length > 1;
             const chosenIds = new Set(comparison.chartIds.filter((_, i) => i !== slotIndex));
+            const availableForSwap = compatible.filter(c => !chosenIds.has(c.id));
+            const canSwap = availableForSwap.length > 1;
 
             const moveTitle = slotSortActive
               ? 'Slot sort mode active — switch to Custom to reorder manually'
@@ -339,7 +350,7 @@ export default function ComparisonControls({ comparison }) {
                   backgroundColor: '#2d2d2d',
                   opacity: isBeingDragged ? 0.4 : 1,
                   transform: isBeingDragged ? 'scale(0.97)' : 'scale(1)',
-                  boxShadow: isDropTarget ? `inset 0 0 0 2px ${ACCENT}80` : 'none',
+                  boxShadow: isDropTarget ? `inset 0 0 0 2px ${accent}80` : 'none',
                   cursor: slotSortActive ? 'default' : 'grab',
                 }}
               >

@@ -53,10 +53,12 @@ export function ChartProvider({ children }) {
   const addComparison = () => {
     setComparisons(prev => {
       const newId = Math.max(0, ...prev.map(c => c.id)) + 1;
+      const existingColors = [...prev.map(c => c.color || '#c73a3a'), ...charts.map(c => c.color)];
       return [...prev, {
         id: newId,
         title: `Comparison ${prev.length + 1}`,
         description: '',
+        color: generateDuskyColor(existingColors),
         chartIds: [],
         slotSortMode: 'custom',
         rowSortMode: 'custom',
@@ -78,6 +80,12 @@ export function ChartProvider({ children }) {
     );
   };
 
+  const updateComparisonColor = (cmpId, newColor) => {
+    setComparisons(prev =>
+      prev.map(c => c.id === cmpId ? { ...c, color: newColor } : c)
+    );
+  };
+
   const setComparisonChartIds = (cmpId, chartIds) => {
     setComparisons(prev =>
       prev.map(c => c.id === cmpId ? { ...c, chartIds: pruneSelection(charts, chartIds) } : c)
@@ -94,6 +102,7 @@ export function ChartProvider({ children }) {
         id: newId,
         title: `${source.title} copy`,
         description: source.description || '',
+        color: source.color || '#c73a3a',
         chartIds: [...source.chartIds],
         slotSortMode: source.slotSortMode || 'custom',
         rowSortMode: source.rowSortMode || 'custom',
@@ -405,6 +414,7 @@ export function ChartProvider({ children }) {
           id: i + 1,
           title: cmp.title || `Comparison ${i + 1}`,
           description: cmp.description || '',
+          color: cmp.color || '#c73a3a',
           chartIds: pruneSelection(newCharts, cmp.chartIds || []),
           slotSortMode: cmp.slotSortMode || 'custom',
           rowSortMode: cmp.rowSortMode || 'custom',
@@ -476,6 +486,7 @@ export function ChartProvider({ children }) {
         addComparison,
         removeComparison,
         updateComparisonTitle,
+        updateComparisonColor,
         setComparisonChartIds,
         duplicateComparison,
         reorderComparisons,

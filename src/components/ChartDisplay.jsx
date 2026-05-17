@@ -273,7 +273,10 @@ export default function ChartDisplay({ chart, index = 0 }) {
         </h3>
       )}
       {chart.description && (
-        <p className="text-xs italic text-center mb-2 mt-0.5" style={{ color: '#888888' }}>
+        <p
+          className="text-xs italic text-center mb-2 mt-0.5"
+          style={{ color: '#888888', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+        >
           {chart.description}
         </p>
       )}
