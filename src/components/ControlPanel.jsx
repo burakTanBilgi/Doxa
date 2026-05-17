@@ -646,12 +646,14 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
   }, [exportOpen]);
 
   const handleExportJson = () => {
-    exportAsJson(analysisTitle, analysisDescription, charts);
+    const comparisons = compareSelection.length >= 2 ? [{ chartIds: compareSelection }] : [];
+    exportAsJson(analysisTitle, analysisDescription, charts, comparisons);
     setExportOpen(false);
   };
 
   const handleExportMarkdown = () => {
-    exportAsMarkdown(analysisTitle, analysisDescription, charts);
+    const comparisons = compareSelection.length >= 2 ? [{ chartIds: compareSelection }] : [];
+    exportAsMarkdown(analysisTitle, analysisDescription, charts, comparisons);
     setExportOpen(false);
   };
 
@@ -683,7 +685,7 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
 
   const handleImportConfirm = (mode) => {
     if (importPrompt) {
-      importCharts(importPrompt.charts, mode);
+      importCharts(importPrompt.charts, mode, importPrompt.comparisons);
       if (mode === 'replace') {
         setAnalysisTitle?.(importPrompt.title);
         setAnalysisDescription?.(importPrompt.description);
