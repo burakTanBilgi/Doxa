@@ -12,7 +12,7 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
   mainHovered, 
   onCanvasLogoHover
 }, ref) {
-  const { charts, reorderCharts, swapCharts, addNewChart } = useCharts();
+  const { charts, comparisons, reorderCharts, swapCharts, addNewChart } = useCharts();
   const [addBtnVisible, setAddBtnVisible] = useState(false);
   const gridRef = useRef(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -199,7 +199,9 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
           onMouseLeave={() => onCanvasLogoHover?.(false)}
         />
       </div>
-      <ChartComparison />
+      {comparisons.map(cmp => (
+        <ChartComparison key={cmp.id} comparison={cmp} />
+      ))}
       <div className="relative">
         <div 
           ref={gridRef}

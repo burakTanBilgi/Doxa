@@ -13,6 +13,7 @@ export function exportAsJson(title, description, charts, comparisons = []) {
       traits: c.data.map(t => ({ name: t.subject, value: t.value })),
     })),
     comparisons: comparisons.map(c => ({
+      title: c.title,
       chartIndices: c.chartIds
         .map(id => idToIndex.get(id))
         .filter(idx => idx !== undefined),
@@ -48,7 +49,7 @@ export function exportAsMarkdown(title, description, charts, comparisons = []) {
     if (sel.length < 2) continue;
 
     const traitOrder = sel[0].data.map(t => t.subject);
-    md += `## Comparison\n`;
+    md += `## ${cmp.title || 'Comparison'}\n`;
     md += `| Trait | ${sel.map(c => c.title).join(' | ')}${sel.length === 2 ? ' | Δ' : ''} |\n`;
     md += `|-------|${sel.map(() => '------').join('|')}${sel.length === 2 ? '|------' : ''}|\n`;
     for (const trait of traitOrder) {
@@ -99,12 +100,13 @@ export function parseImportJson(text) {
 
   const comparisons = Array.isArray(data.comparisons)
     ? data.comparisons
-        .map(c => ({
+        .map((c, i) => ({
+          title: c.title || `Comparison ${i + 1}`,
           chartIds: (c.chartIndices || [])
             .map(idx => charts[idx]?.id)
             .filter(id => id !== undefined),
         }))
-        .filter(c => c.chartIds.length >= 2)
+        .filter(c => c.chartIds.length >= 1)
     : [];
 
   return {

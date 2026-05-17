@@ -43,25 +43,76 @@ const ChartContext = createContext(null);
 
 export function ChartProvider({ children }) {
   const [charts, setCharts] = useState(initialCharts);
-  const [compareMode, setCompareMode] = useState(false);
-  const [compareSelection, setCompareSelection] = useState([]);
+  const [comparisons, setComparisons] = useState([]);
 
-  const toggleCompareMode = () => {
-    setCompareMode(prev => !prev);
-    setCompareSelection([]);
-  };
+  const pruneAllComparisons = (nextCharts) =>
+    setComparisons(prev =>
+      prev.map(cmp => ({ ...cmp, chartIds: pruneSelection(nextCharts, cmp.chartIds) }))
+    );
 
-  const toggleChartInComparison = (chartId) => {
-    setCompareSelection(prev => {
-      if (prev.includes(chartId)) {
-        return prev.filter(id => id !== chartId);
-      }
-      const next = [...prev, chartId];
-      return pruneSelection(charts, next);
+  const addComparison = () => {
+    setComparisons(prev => {
+      const newId = Math.max(0, ...prev.map(c => c.id)) + 1;
+      return [...prev, { id: newId, title: `Comparison ${prev.length + 1}`, chartIds: [] }];
     });
   };
 
-  const clearComparison = () => setCompareSelection([]);
+  const removeComparison = (cmpId) => {
+    setComparisons(prev => prev.filter(c => c.id !== cmpId));
+  };
+
+  const updateComparisonTitle = (cmpId, newTitle) => {
+    if (!newTitle.trim()) return;
+    setComparisons(prev =>
+      prev.map(c => c.id === cmpId ? { ...c, title: newTitle.trim() } : c)
+    );
+  };
+
+  const setComparisonChartIds = (cmpId, chartIds) => {
+    setComparisons(prev =>
+      prev.map(c => c.id === cmpId ? { ...c, chartIds: pruneSelection(charts, chartIds) } : c)
+    );
+  };
+
+  const duplicateComparison = (cmpId) => {
+    setComparisons(prev => {
+      const idx = prev.findIndex(c => c.id === cmpId);
+      if (idx === -1) return prev;
+      const source = prev[idx];
+      const newId = Math.max(0, ...prev.map(c => c.id)) + 1;
+      const copy = { id: newId, title: `${source.title} copy`, chartIds: [...source.chartIds] };
+      const next = [...prev];
+      next.splice(idx + 1, 0, copy);
+      return next;
+    });
+  };
+
+  const reorderComparisons = (fromIndex, toIndex) => {
+    setComparisons(prev => {
+      const result = [...prev];
+      const [removed] = result.splice(fromIndex, 1);
+      result.splice(toIndex, 0, removed);
+      return result;
+    });
+  };
+
+  const duplicateChart = (chartId) => {
+    setCharts(prev => {
+      const idx = prev.findIndex(c => c.id === chartId);
+      if (idx === -1) return prev;
+      const source = prev[idx];
+      const newId = Math.max(0, ...prev.map(c => c.id)) + 1;
+      const copy = {
+        id: newId,
+        title: `${source.title} copy`,
+        color: source.color,
+        data: source.data.map(t => ({ ...t })),
+      };
+      const next = [...prev];
+      next.splice(idx + 1, 0, copy);
+      return next;
+    });
+  };
 
   const updateTraitValue = (chartId, subjectIndex, newValue) => {
     setCharts(prevCharts =>
@@ -100,7 +151,7 @@ export function ChartProvider({ children }) {
             }
           : chart
       );
-      setCompareSelection(prev => pruneSelection(nextCharts, prev));
+      pruneAllComparisons(nextCharts);
       return nextCharts;
     });
   };
@@ -115,7 +166,7 @@ export function ChartProvider({ children }) {
             }
           : chart
       );
-      setCompareSelection(prev => pruneSelection(nextCharts, prev));
+      pruneAllComparisons(nextCharts);
       return nextCharts;
     });
   };
@@ -215,7 +266,7 @@ export function ChartProvider({ children }) {
   const removeChart = (chartId) => {
     setCharts(prevCharts => {
       const nextCharts = prevCharts.filter(chart => chart.id !== chartId);
-      setCompareSelection(prev => pruneSelection(nextCharts, prev));
+      pruneAllComparisons(nextCharts);
       return nextCharts;
     });
   };
@@ -241,7 +292,7 @@ export function ChartProvider({ children }) {
             }
           : chart
       );
-      setCompareSelection(prev => pruneSelection(nextCharts, prev));
+      pruneAllComparisons(nextCharts);
       return nextCharts;
     });
   };
@@ -275,13 +326,17 @@ export function ChartProvider({ children }) {
     );
   };
 
-  const importCharts = (newCharts, mode = 'replace', comparisons = []) => {
+  const importCharts = (newCharts, mode = 'replace', newComparisons = []) => {
     if (mode === 'replace') {
       setCharts(newCharts);
-      const restored = comparisons[0]?.chartIds ?? [];
-      const pruned = pruneSelection(newCharts, restored);
-      setCompareSelection(pruned);
-      if (pruned.length >= 2) setCompareMode(true);
+      const pruned = newComparisons
+        .map((cmp, i) => ({
+          id: i + 1,
+          title: cmp.title || `Comparison ${i + 1}`,
+          chartIds: pruneSelection(newCharts, cmp.chartIds || []),
+        }))
+        .filter(c => c.chartIds.length >= 1);
+      setComparisons(pruned);
     } else {
       setCharts(prev => [...prev, ...newCharts.map((c, i) => ({
         ...c,
@@ -316,7 +371,7 @@ export function ChartProvider({ children }) {
         return chart;
       });
 
-      setCompareSelection(prev => pruneSelection(nextCharts, prev));
+      pruneAllComparisons(nextCharts);
       return nextCharts;
     });
   };
@@ -338,11 +393,14 @@ export function ChartProvider({ children }) {
         reorderTraits,
         transferTrait,
         importCharts,
-        compareMode,
-        compareSelection,
-        toggleCompareMode,
-        toggleChartInComparison,
-        clearComparison
+        duplicateChart,
+        comparisons,
+        addComparison,
+        removeComparison,
+        updateComparisonTitle,
+        setComparisonChartIds,
+        duplicateComparison,
+        reorderComparisons,
       }}
     >
       {children}

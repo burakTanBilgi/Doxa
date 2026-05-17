@@ -1,77 +1,82 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, Tooltip
 } from 'recharts';
-import { X } from 'lucide-react';
 import { useCharts } from '../context/ChartContext';
 import { buildComparisonView } from '../utils/compareCompatibility';
 
-export default function ChartComparison() {
-  const { charts, compareMode, compareSelection, toggleChartInComparison, clearComparison } = useCharts();
+const ACCENT = '#c73a3a';
+
+export default function ChartComparison({ comparison }) {
+  const { charts, updateComparisonTitle } = useCharts();
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState(comparison.title);
 
   const view = useMemo(
-    () => buildComparisonView(charts, compareSelection),
-    [charts, compareSelection]
+    () => buildComparisonView(charts, comparison.chartIds),
+    [charts, comparison.chartIds]
   );
 
-  if (!compareMode) return null;
-
-  if (!view) {
-    return (
-      <div
-        className="rounded-2xl p-4 mb-3"
-        style={{ backgroundColor: '#2d2d2d', border: '1px dashed #c73a3a', color: '#888888' }}
-      >
-        <p className="text-sm text-center">Select 2+ charts with matching trait names to compare.</p>
-      </div>
-    );
-  }
+  const handleTitleSave = () => {
+    if (titleInput.trim()) updateComparisonTitle(comparison.id, titleInput.trim());
+    setIsEditingTitle(false);
+  };
 
   return (
     <div
       className="rounded-2xl p-4 mb-3"
-      style={{ backgroundColor: '#2d2d2d', border: '1px solid #c73a3a', contain: 'layout style' }}
+      style={{ backgroundColor: '#2d2d2d', border: `1px solid ${ACCENT}`, contain: 'layout style' }}
     >
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: '#c73a3a' }}>
-          Comparison
-        </h3>
-        <button
-          onClick={clearComparison}
-          data-html2canvas-ignore="true"
-          className="p-1 rounded hover:bg-white/5 transition-colors"
-          title="Clear comparison"
-          style={{ color: '#888888' }}
-        >
-          <X size={14} />
-        </button>
-      </div>
-
-      <div className="flex flex-wrap gap-2 mb-3" data-html2canvas-ignore="true">
-        {view.series.map(s => (
-          <span
-            key={s.chartId}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs"
-            style={{ backgroundColor: s.color + '30', color: '#d0d0d0' }}
+        {isEditingTitle ? (
+          <input
+            type="text"
+            value={titleInput}
+            onChange={(e) => setTitleInput(e.target.value)}
+            onBlur={handleTitleSave}
+            onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
+            className="text-sm font-semibold uppercase tracking-wider bg-transparent border-b focus:outline-none flex-1"
+            style={{ color: ACCENT, borderColor: ACCENT }}
+            autoFocus
+          />
+        ) : (
+          <h3
+            className="text-sm font-semibold uppercase tracking-wider cursor-pointer hover:scale-[1.02] transition-transform"
+            style={{ color: ACCENT }}
+            onClick={() => { setTitleInput(comparison.title); setIsEditingTitle(true); }}
+            title="Click to rename comparison"
           >
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-            {s.title}
-            <button
-              onClick={() => toggleChartInComparison(s.chartId)}
-              className="ml-1 opacity-60 hover:opacity-100"
-              title="Remove from comparison"
-            >
-              <X size={10} />
-            </button>
-          </span>
-        ))}
+            {comparison.title}
+          </h3>
+        )}
       </div>
 
-      {view.chartType === 'radar' ? <RadarOverlay view={view} /> : <ScatterOverlay view={view} />}
+      {!view ? (
+        <p className="text-sm text-center py-6" style={{ color: '#888888' }}>
+          Add at least 2 charts with matching trait names to see the comparison.
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-2 mb-3" data-html2canvas-ignore="true">
+            {view.series.map(s => (
+              <span
+                key={s.chartId}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs"
+                style={{ backgroundColor: s.color + '30', color: '#d0d0d0' }}
+              >
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                {s.title}
+              </span>
+            ))}
+          </div>
 
-      <DeltaTable view={view} />
+          {view.chartType === 'radar' ? <RadarOverlay view={view} /> : <ScatterOverlay view={view} />}
+
+          <DeltaTable view={view} />
+        </>
+      )}
     </div>
   );
 }
