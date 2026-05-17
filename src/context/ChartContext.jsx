@@ -56,6 +56,7 @@ export function ChartProvider({ children }) {
       return [...prev, {
         id: newId,
         title: `Comparison ${prev.length + 1}`,
+        description: '',
         chartIds: [],
         slotSortMode: 'custom',
         rowSortMode: 'custom',
@@ -89,6 +90,7 @@ export function ChartProvider({ children }) {
       const copy = {
         id: newId,
         title: `${source.title} copy`,
+        description: source.description || '',
         chartIds: [...source.chartIds],
         slotSortMode: source.slotSortMode || 'custom',
         rowSortMode: source.rowSortMode || 'custom',
@@ -118,6 +120,7 @@ export function ChartProvider({ children }) {
         id: newId,
         title: `${source.title} copy`,
         color: source.color,
+        description: source.description || '',
         data: source.data.map(t => ({ ...t })),
         sortMode: source.sortMode || 'custom',
       };
@@ -137,6 +140,27 @@ export function ChartProvider({ children }) {
 
   const setComparisonRowSortMode = (cmpId, mode) => {
     setComparisons(prev => prev.map(c => c.id === cmpId ? { ...c, rowSortMode: mode } : c));
+  };
+
+  const updateChartDescription = (chartId, description) => {
+    setCharts(prev => prev.map(c => c.id === chartId ? { ...c, description } : c));
+  };
+
+  const updateComparisonDescription = (cmpId, description) => {
+    setComparisons(prev => prev.map(c => c.id === cmpId ? { ...c, description } : c));
+  };
+
+  const updateTraitDescription = (chartId, traitIndex, description) => {
+    setCharts(prev => prev.map(chart =>
+      chart.id === chartId
+        ? {
+            ...chart,
+            data: chart.data.map((trait, idx) =>
+              idx === traitIndex ? { ...trait, description } : trait
+            ),
+          }
+        : chart
+    ));
   };
 
   const updateTraitValue = (chartId, subjectIndex, newValue) => {
@@ -358,6 +382,7 @@ export function ChartProvider({ children }) {
         .map((cmp, i) => ({
           id: i + 1,
           title: cmp.title || `Comparison ${i + 1}`,
+          description: cmp.description || '',
           chartIds: pruneSelection(newCharts, cmp.chartIds || []),
           slotSortMode: cmp.slotSortMode || 'custom',
           rowSortMode: cmp.rowSortMode || 'custom',
@@ -431,6 +456,9 @@ export function ChartProvider({ children }) {
         reorderComparisons,
         setComparisonSlotSortMode,
         setComparisonRowSortMode,
+        updateChartDescription,
+        updateComparisonDescription,
+        updateTraitDescription,
       }}
     >
       {children}

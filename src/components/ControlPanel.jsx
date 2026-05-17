@@ -5,6 +5,7 @@ import { exportAsJson, exportAsMarkdown, parseImportJson } from '../utils/export
 import { sortedChartData } from '../utils/sortViews';
 import ComparisonControls from './ComparisonControls';
 import SortMenu from './SortMenu';
+import EditableDescription from './EditableDescription';
 
 const CHART_SORT_MODES = [
   { value: 'custom', label: 'Custom (drag order)' },
@@ -90,7 +91,7 @@ function useAutoScroll(isDragging) {
 }
 
 function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDragging, dragOverIndex, onCrossChartDrop, sortLocked }) {
-  const { updateTraitValue, removeTrait, updateTraitName } = useCharts();
+  const { updateTraitValue, removeTrait, updateTraitName, updateTraitDescription } = useCharts();
   const [isEditing, setIsEditing] = useState(false);
   const [nameInput, setNameInput] = useState(trait.subject);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -248,12 +249,20 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
           '--tw-ring-color': isSliderActive ? chart.color + '60' : 'transparent'
         }}
       />
+      <div className="mt-1">
+        <EditableDescription
+          value={trait.description}
+          onChange={(v) => updateTraitDescription(chart.id, index, v)}
+          accentColor={chart.color}
+          placeholder="Describe this trait..."
+        />
+      </div>
     </div>
   );
 }
 
 function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDragOver, onChartDrop, isDragTarget }) {
-  const { updateChartColor, addTrait, removeChart, updateChartTitle, reorderTraits, transferTrait, duplicateChart, setChartSortMode } = useCharts();
+  const { updateChartColor, addTrait, removeChart, updateChartTitle, reorderTraits, transferTrait, duplicateChart, setChartSortMode, updateChartDescription } = useCharts();
   const sortMode = chart.sortMode || 'custom';
   const isSorted = sortMode !== 'custom';
   const displayData = sortedChartData(chart);
@@ -556,10 +565,17 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
         </div>
       </div>
 
-      <div 
+      <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}
       >
-        <div 
+        <div className="mb-2">
+          <EditableDescription
+            value={chart.description}
+            onChange={(v) => updateChartDescription(chart.id, v)}
+            accentColor={chart.color}
+          />
+        </div>
+        <div
           className="space-y-1 mb-4 min-h-[40px] rounded-lg transition-all"
           onDragLeave={() => setDragOverIndex(null)}
           onDragOver={(e) => {

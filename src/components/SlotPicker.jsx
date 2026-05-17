@@ -30,22 +30,33 @@ export default function SlotPicker({ value, compatibleCharts, chosenIds, onChang
   const available = compatibleCharts.filter(c => !chosenIds.has(c.id));
   const inComparison = compatibleCharts.filter(c => chosenIds.has(c.id));
 
+  // Disabled = no other compatible chart exists. Render as a plain static label
+  // (no chevron, no button styling, no special cursor) so it reads as "this is the
+  // only option" rather than an unclickable control.
+  if (disabled) {
+    return (
+      <div
+        className="flex-1 min-w-0 text-xs px-2 py-1 rounded-md truncate"
+        style={{ backgroundColor: '#3d3d3d', color: '#d0d0d0', opacity: 0.8 }}
+        title="No other charts share these trait names"
+      >
+        {current?.title ?? '—'}
+      </div>
+    );
+  }
+
   return (
     <div ref={wrapRef} className="relative flex-1 min-w-0">
       <button
-        onClick={() => !disabled && setOpen(o => !o)}
-        disabled={disabled}
+        onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between gap-1.5 text-xs px-2 py-1 rounded-md focus:outline-none truncate"
         style={{
           backgroundColor: '#3d3d3d',
           color: '#d0d0d0',
           border: 'none',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          opacity: disabled ? 0.7 : 1,
+          cursor: 'pointer',
         }}
-        title={disabled
-          ? 'No other charts share these trait names'
-          : (isBaselineSlot ? 'Baseline (defines compatibility)' : 'Compatible chart')}
+        title={isBaselineSlot ? 'Baseline (defines compatibility)' : 'Compatible chart'}
       >
         <span className="truncate">{current?.title ?? '—'}</span>
         <ChevronDown size={11} style={{ flexShrink: 0, opacity: 0.6 }} />

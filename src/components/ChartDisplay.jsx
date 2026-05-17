@@ -260,8 +260,8 @@ export default function ChartDisplay({ chart, index = 0 }) {
           autoFocus
         />
       ) : (
-        <h3 
-          className="text-base font-semibold mb-3 text-center transition-all cursor-pointer hover:scale-105"
+        <h3
+          className="text-base font-semibold text-center transition-all cursor-pointer hover:scale-105"
           style={{ color: '#d0d0d0' }}
           onClick={() => {
             setTitleInput(chart.title);
@@ -272,6 +272,12 @@ export default function ChartDisplay({ chart, index = 0 }) {
           {chart.title}
         </h3>
       )}
+      {chart.description && (
+        <p className="text-xs italic text-center mb-2 mt-0.5" style={{ color: '#888888' }}>
+          {chart.description}
+        </p>
+      )}
+      {!chart.description && <div className="mb-3" />}
 
       {/* Edit field overlay */}
       {editingFieldIndex !== null && (

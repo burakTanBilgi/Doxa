@@ -13,11 +13,17 @@ export function exportAsJson(title, description, charts, comparisons = []) {
     charts: charts.map(c => ({
       title: c.title,
       color: c.color,
-      traits: c.data.map(t => ({ name: t.subject, value: t.value })),
+      description: c.description || '',
+      traits: c.data.map(t => ({
+        name: t.subject,
+        value: t.value,
+        description: t.description || '',
+      })),
       sortMode: c.sortMode || 'custom',
     })),
     comparisons: comparisons.map(c => ({
       title: c.title,
+      description: c.description || '',
       chartIndices: c.chartIds
         .map(id => idToIndex.get(id))
         .filter(idx => idx !== undefined),
@@ -40,10 +46,15 @@ export function exportAsMarkdown(title, description, charts, comparisons = []) {
 
   for (const chart of charts) {
     md += `## ${chart.title}\n`;
-    md += '| Trait | Value |\n';
-    md += '|-------|-------|\n';
+    if (chart.description) md += `_${chart.description}_\n\n`;
+    const hasTraitDescriptions = chart.data.some(t => t.description);
+    md += hasTraitDescriptions
+      ? '| Trait | Value | Notes |\n|-------|-------|-------|\n'
+      : '| Trait | Value |\n|-------|-------|\n';
     for (const trait of sortedChartData(chart)) {
-      md += `| ${trait.subject} | ${trait.value} |\n`;
+      md += hasTraitDescriptions
+        ? `| ${trait.subject} | ${trait.value} | ${trait.description || ''} |\n`
+        : `| ${trait.subject} | ${trait.value} |\n`;
     }
     md += '\n';
   }
@@ -54,6 +65,7 @@ export function exportAsMarkdown(title, description, charts, comparisons = []) {
     if (!view) continue;
 
     md += `## ${cmp.title || 'Comparison'}\n`;
+    if (cmp.description) md += `_${cmp.description}_\n\n`;
 
     const titles = view.series.map(s => s.title);
     const showDelta = view.deltaPair != null;
@@ -96,10 +108,12 @@ export function parseImportJson(text) {
       id: Date.now() + i,
       title: c.title,
       color: c.color || '#888888',
+      description: c.description || '',
       data: c.traits.map(t => ({
         subject: t.name,
         value: typeof t.value === 'number' ? Math.min(100, Math.max(0, t.value)) : 50,
         fullMark: 100,
+        description: t.description || '',
       })),
       sortMode: c.sortMode || 'custom',
     };
@@ -109,6 +123,7 @@ export function parseImportJson(text) {
     ? data.comparisons
         .map((c, i) => ({
           title: c.title || `Comparison ${i + 1}`,
+          description: c.description || '',
           chartIds: (c.chartIndices || [])
             .map(idx => charts[idx]?.id)
             .filter(id => id !== undefined),

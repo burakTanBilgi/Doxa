@@ -57,6 +57,11 @@ export default function ChartComparison({ comparison }) {
           </h3>
         )}
       </div>
+      {comparison.description && (
+        <p className="text-xs italic mb-3 -mt-1" style={{ color: '#888888' }}>
+          {comparison.description}
+        </p>
+      )}
 
       {!view ? (
         <p className="text-sm text-center py-6" style={{ color: '#888888' }}>

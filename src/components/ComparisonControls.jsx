@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Trash2, Copy, GitCompareArrows, Plus, X, ArrowUp, ArrowDown } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Copy, GitCompareArrows, Plus, X, ArrowUp, ArrowDown, GripVertical } from 'lucide-react';
 import { useCharts } from '../context/ChartContext';
 import { areCompatible } from '../utils/compareCompatibility';
 import SortMenu from './SortMenu';
 import SlotPicker from './SlotPicker';
+import EditableDescription from './EditableDescription';
 
 const ACCENT = '#c73a3a';
 
@@ -32,6 +33,7 @@ export default function ComparisonControls({ comparison }) {
     duplicateComparison,
     setComparisonSlotSortMode,
     setComparisonRowSortMode,
+    updateComparisonDescription,
   } = useCharts();
 
   const slotSortMode = comparison.slotSortMode || 'custom';
@@ -42,6 +44,8 @@ export default function ComparisonControls({ comparison }) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(comparison.title);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [draggedSlot, setDraggedSlot] = useState(null);
+  const [dragOverSlot, setDragOverSlot] = useState(null);
 
   const handleTitleSave = () => {
     if (titleInput.trim()) {
@@ -79,6 +83,63 @@ export default function ComparisonControls({ comparison }) {
     if (target < 0 || target >= next.length) return;
     [next[slotIndex], next[target]] = [next[target], next[slotIndex]];
     setComparisonChartIds(comparison.id, next);
+  };
+
+  const reorderSlot = (fromIndex, toIndex) => {
+    if (fromIndex === toIndex) return;
+    const next = [...comparison.chartIds];
+    const [removed] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, removed);
+    setComparisonChartIds(comparison.id, next);
+  };
+
+  const handleSlotDragStart = (e, slotIndex) => {
+    if (slotSortActive) { e.preventDefault(); return; }
+    e.stopPropagation();
+    setDraggedSlot(slotIndex);
+    e.dataTransfer.effectAllowed = 'move';
+    const chart = charts.find(c => c.id === comparison.chartIds[slotIndex]);
+    const preview = document.createElement('div');
+    preview.style.cssText = `
+      padding: 6px 12px;
+      background: ${chart?.color || '#c73a3a'};
+      color: white;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      position: fixed;
+      top: -1000px;
+      left: 0;
+      width: fit-content;
+      white-space: nowrap;
+    `;
+    preview.textContent = chart?.title || '';
+    document.body.appendChild(preview);
+    e.dataTransfer.setDragImage(preview, 40, 15);
+    requestAnimationFrame(() => document.body.removeChild(preview));
+  };
+
+  const handleSlotDragOver = (e, slotIndex) => {
+    if (draggedSlot === null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverSlot(slotIndex);
+  };
+
+  const handleSlotDrop = (e, slotIndex) => {
+    if (draggedSlot === null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    reorderSlot(draggedSlot, slotIndex);
+    setDraggedSlot(null);
+    setDragOverSlot(null);
+  };
+
+  const handleSlotDragEnd = () => {
+    setDraggedSlot(null);
+    setDragOverSlot(null);
   };
 
   const addSlot = () => {
@@ -207,6 +268,13 @@ export default function ComparisonControls({ comparison }) {
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}
       >
+        <div className="mb-2">
+          <EditableDescription
+            value={comparison.description}
+            onChange={(v) => updateComparisonDescription(comparison.id, v)}
+            accentColor={ACCENT}
+          />
+        </div>
         <div className="space-y-1.5">
           {comparison.chartIds.length === 0 && (
             <p className="text-xs text-center py-2" style={{ color: '#666666' }}>
@@ -226,12 +294,36 @@ export default function ComparisonControls({ comparison }) {
               ? 'Slot sort mode active — switch to Custom to reorder manually'
               : null;
 
+            const isBeingDragged = draggedSlot === slotIndex;
+            const isDropTarget = dragOverSlot === slotIndex && draggedSlot !== null && draggedSlot !== slotIndex;
+
             return (
               <div
                 key={`slot-${slotIndex}`}
-                className="flex items-center gap-1.5 p-1.5 rounded-lg"
-                style={{ backgroundColor: '#2d2d2d' }}
+                draggable={!slotSortActive}
+                onDragStart={(e) => handleSlotDragStart(e, slotIndex)}
+                onDragOver={(e) => handleSlotDragOver(e, slotIndex)}
+                onDrop={(e) => handleSlotDrop(e, slotIndex)}
+                onDragEnd={handleSlotDragEnd}
+                onDragLeave={() => { if (dragOverSlot === slotIndex) setDragOverSlot(null); }}
+                className="flex items-center gap-1.5 p-1.5 rounded-lg transition-all duration-150"
+                style={{
+                  backgroundColor: '#2d2d2d',
+                  opacity: isBeingDragged ? 0.4 : 1,
+                  transform: isBeingDragged ? 'scale(0.97)' : 'scale(1)',
+                  boxShadow: isDropTarget ? `inset 0 0 0 2px ${ACCENT}80` : 'none',
+                  cursor: slotSortActive ? 'default' : 'grab',
+                }}
               >
+                <GripVertical
+                  size={12}
+                  style={{
+                    color: '#666666',
+                    flexShrink: 0,
+                    opacity: slotSortActive ? 0.15 : 0.5,
+                    cursor: slotSortActive ? 'not-allowed' : 'grab',
+                  }}
+                />
                 <span
                   className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                   style={{ backgroundColor: chart?.color || '#666666' }}
