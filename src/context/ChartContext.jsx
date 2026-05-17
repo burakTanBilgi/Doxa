@@ -1,4 +1,5 @@
 import { createContext, useContext, useState } from 'react';
+import { pruneSelection } from '../utils/compareCompatibility';
 
 const initialCharts = [
   {
@@ -42,6 +43,25 @@ const ChartContext = createContext(null);
 
 export function ChartProvider({ children }) {
   const [charts, setCharts] = useState(initialCharts);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareSelection, setCompareSelection] = useState([]);
+
+  const toggleCompareMode = () => {
+    setCompareMode(prev => !prev);
+    setCompareSelection([]);
+  };
+
+  const toggleChartInComparison = (chartId) => {
+    setCompareSelection(prev => {
+      if (prev.includes(chartId)) {
+        return prev.filter(id => id !== chartId);
+      }
+      const next = [...prev, chartId];
+      return pruneSelection(charts, next);
+    });
+  };
+
+  const clearComparison = () => setCompareSelection([]);
 
   const updateTraitValue = (chartId, subjectIndex, newValue) => {
     setCharts(prevCharts =>
@@ -68,8 +88,8 @@ export function ChartProvider({ children }) {
 
   const addTrait = (chartId, traitName) => {
     if (!traitName.trim()) return;
-    setCharts(prevCharts =>
-      prevCharts.map(chart =>
+    setCharts(prevCharts => {
+      const nextCharts = prevCharts.map(chart =>
         chart.id === chartId
           ? {
               ...chart,
@@ -79,21 +99,25 @@ export function ChartProvider({ children }) {
               ]
             }
           : chart
-      )
-    );
+      );
+      setCompareSelection(prev => pruneSelection(nextCharts, prev));
+      return nextCharts;
+    });
   };
 
   const removeTrait = (chartId, subjectIndex) => {
-    setCharts(prevCharts =>
-      prevCharts.map(chart =>
+    setCharts(prevCharts => {
+      const nextCharts = prevCharts.map(chart =>
         chart.id === chartId
           ? {
               ...chart,
               data: chart.data.filter((_, idx) => idx !== subjectIndex)
             }
           : chart
-      )
-    );
+      );
+      setCompareSelection(prev => pruneSelection(nextCharts, prev));
+      return nextCharts;
+    });
   };
 
   // Convert hex to HSL for color comparison
@@ -189,7 +213,11 @@ export function ChartProvider({ children }) {
   };
 
   const removeChart = (chartId) => {
-    setCharts(prevCharts => prevCharts.filter(chart => chart.id !== chartId));
+    setCharts(prevCharts => {
+      const nextCharts = prevCharts.filter(chart => chart.id !== chartId);
+      setCompareSelection(prev => pruneSelection(nextCharts, prev));
+      return nextCharts;
+    });
   };
 
   const updateChartTitle = (chartId, newTitle) => {
@@ -202,8 +230,8 @@ export function ChartProvider({ children }) {
 
   const updateTraitName = (chartId, traitIndex, newName) => {
     if (!newName.trim()) return;
-    setCharts(prevCharts =>
-      prevCharts.map(chart =>
+    setCharts(prevCharts => {
+      const nextCharts = prevCharts.map(chart =>
         chart.id === chartId
           ? {
               ...chart,
@@ -212,8 +240,10 @@ export function ChartProvider({ children }) {
               )
             }
           : chart
-      )
-    );
+      );
+      setCompareSelection(prev => pruneSelection(nextCharts, prev));
+      return nextCharts;
+    });
   };
 
   const reorderCharts = (fromIndex, toIndex) => {
@@ -245,9 +275,13 @@ export function ChartProvider({ children }) {
     );
   };
 
-  const importCharts = (newCharts, mode = 'replace') => {
+  const importCharts = (newCharts, mode = 'replace', comparisons = []) => {
     if (mode === 'replace') {
       setCharts(newCharts);
+      const restored = comparisons[0]?.chartIds ?? [];
+      const pruned = pruneSelection(newCharts, restored);
+      setCompareSelection(pruned);
+      if (pruned.length >= 2) setCompareMode(true);
     } else {
       setCharts(prev => [...prev, ...newCharts.map((c, i) => ({
         ...c,
@@ -260,10 +294,10 @@ export function ChartProvider({ children }) {
     setCharts(prevCharts => {
       const fromChart = prevCharts.find(c => c.id === fromChartId);
       if (!fromChart || fromChart.data.length <= 2) return prevCharts; // Keep minimum 2 traits
-      
+
       const trait = fromChart.data[fromIndex];
-      
-      return prevCharts.map(chart => {
+
+      const nextCharts = prevCharts.map(chart => {
         if (chart.id === fromChartId) {
           return {
             ...chart,
@@ -281,6 +315,9 @@ export function ChartProvider({ children }) {
         }
         return chart;
       });
+
+      setCompareSelection(prev => pruneSelection(nextCharts, prev));
+      return nextCharts;
     });
   };
 
@@ -300,7 +337,12 @@ export function ChartProvider({ children }) {
         swapCharts,
         reorderTraits,
         transferTrait,
-        importCharts
+        importCharts,
+        compareMode,
+        compareSelection,
+        toggleCompareMode,
+        toggleChartInComparison,
+        clearComparison
       }}
     >
       {children}
