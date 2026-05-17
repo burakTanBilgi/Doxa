@@ -193,15 +193,21 @@ export default function ComparisonControls({ comparison }) {
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <input
-            type="color"
-            value={accent}
-            onChange={(e) => updateComparisonColor(comparison.id, e.target.value)}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="w-6 h-6 rounded-full cursor-pointer border-0 bg-transparent flex-shrink-0 transition-transform hover:scale-110"
+          <label
+            className="relative cursor-pointer flex-shrink-0 transition-transform hover:scale-110"
             title="Change comparison color"
-          />
-          <GitCompareArrows size={16} style={{ color: accent, flexShrink: 0 }} />
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <input
+              type="color"
+              value={accent}
+              onChange={(e) => updateComparisonColor(comparison.id, e.target.value)}
+              className="absolute inset-0 opacity-0 cursor-pointer"
+              style={{ width: '100%', height: '100%' }}
+              aria-label="Change comparison color"
+            />
+            <GitCompareArrows size={16} style={{ color: accent, flexShrink: 0 }} />
+          </label>
           {isEditingTitle ? (
             <input
               type="text"
