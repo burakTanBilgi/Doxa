@@ -32,9 +32,13 @@ export async function cloudLoadProject(id) {
 
 export async function cloudCreateProject(userId, title, payload) {
   assertReady();
+  // Stamp updated_at explicitly so the row is well-formed even if the column
+  // is NOT NULL without a default, and so the freshly-inserted row sorts
+  // correctly against any existing rows that DO have a default trigger.
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from(TABLE)
-    .insert({ user_id: userId, title, payload })
+    .insert({ user_id: userId, title, payload, updated_at: now })
     .select('id, title, updated_at')
     .single();
   if (error) throw error;

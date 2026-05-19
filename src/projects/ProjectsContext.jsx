@@ -80,10 +80,13 @@ export function ProjectsProvider({ children }) {
         if (cancelled) return;
 
         if (list.length === 0) {
-          // Seed first project from current in-memory state.
+          // Seed first project from current in-memory state. Suppress the
+          // 700ms post-mount autosave: serializeProject() at this moment IS
+          // exactly what we just wrote, so re-writing would be wasted work.
           const payload = serializeProject();
           const created = await cloudCreateProject(user.id, payload.title || 'Untitled Project', payload);
           if (cancelled) return;
+          suppressUntilRef.current = Date.now() + AUTOSAVE_DEBOUNCE_MS * 2;
           setProjectList([created]);
           setActiveId(created.id);
           setSyncStatus('saved');
@@ -150,7 +153,7 @@ export function ProjectsProvider({ children }) {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [analysisTitle, analysisDescription, charts, comparisons, activeId, user, supabaseConfigured, serializeProject]);
+  }, [analysisTitle, analysisDescription, charts, comparisons, activeId, user, supabaseConfigured, serializeProject, recordError]);
 
   // ---- Actions -------------------------------------------------------------
   const openProject = useCallback(async (id) => {
