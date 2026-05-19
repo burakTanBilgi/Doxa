@@ -29,6 +29,7 @@ export function ProjectsProvider({ children }) {
   const [activeId, setActiveId] = useState(null);
   // 'idle' | 'saving' | 'saved' | 'error' | 'offline'
   const [syncStatus, setSyncStatus] = useState('idle');
+  const [lastError, setLastError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
 
   // Suppress autosave for one debounce window after a loadProject() so we
@@ -38,6 +39,16 @@ export function ProjectsProvider({ children }) {
   const debounceRef = useRef(null);
   const activeIdRef = useRef(null);
   const userIdRef = useRef(null);
+  // React StrictMode runs effects twice in dev. Track the user we've already
+  // bootstrapped for so we don't seed two duplicate "first" projects.
+  const bootstrappedForRef = useRef(null);
+
+  const recordError = useCallback((label, err) => {
+    const msg = err?.message || err?.error_description || String(err);
+    console.error(`${label}:`, err);
+    setLastError(`${label}: ${msg}`);
+    setSyncStatus('error');
+  }, []);
 
   useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
   useEffect(() => { userIdRef.current = user?.id ?? null; }, [user]);
@@ -52,12 +63,17 @@ export function ProjectsProvider({ children }) {
       setProjectList([]);
       setActiveId(null);
       setSyncStatus('idle');
+      bootstrappedForRef.current = null;
       return;
     }
+    // StrictMode invokes this twice in dev; only run once per user id.
+    if (bootstrappedForRef.current === user.id) return;
+    bootstrappedForRef.current = user.id;
 
     let cancelled = false;
     (async () => {
       setSyncStatus('saving');
+      setLastError('');
       try {
         const list = await cloudListProjects(user.id);
         if (cancelled) return;
@@ -82,8 +98,7 @@ export function ProjectsProvider({ children }) {
           setSyncStatus('saved');
         }
       } catch (err) {
-        console.error('Project bootstrap failed:', err);
-        if (!cancelled) setSyncStatus('error');
+        if (!cancelled) recordError('Project bootstrap failed', err);
       }
     })();
 
@@ -127,8 +142,7 @@ export function ProjectsProvider({ children }) {
         });
         setSyncStatus('saved');
       } catch (err) {
-        console.error('Autosave failed:', err);
-        setSyncStatus('error');
+        recordError('Autosave failed', err);
       }
     }, AUTOSAVE_DEBOUNCE_MS);
 
@@ -149,10 +163,9 @@ export function ProjectsProvider({ children }) {
       setSyncStatus('saved');
       setModalOpen(false);
     } catch (err) {
-      console.error('Open project failed:', err);
-      setSyncStatus('error');
+      recordError('Open project failed', err);
     }
-  }, [user, loadProject]);
+  }, [user, loadProject, recordError]);
 
   const newProject = useCallback(async () => {
     if (!user) return;
@@ -174,10 +187,9 @@ export function ProjectsProvider({ children }) {
       setSyncStatus('saved');
       setModalOpen(false);
     } catch (err) {
-      console.error('New project failed:', err);
-      setSyncStatus('error');
+      recordError('New project failed', err);
     }
-  }, [user, loadProject]);
+  }, [user, loadProject, recordError]);
 
   const deleteProject = useCallback(async (id) => {
     if (!user) return;
@@ -198,10 +210,9 @@ export function ProjectsProvider({ children }) {
         return next;
       });
     } catch (err) {
-      console.error('Delete project failed:', err);
-      setSyncStatus('error');
+      recordError('Delete project failed', err);
     }
-  }, [user, openProject, newProject]);
+  }, [user, openProject, newProject, recordError]);
 
   const renameProject = useCallback(async (id, title) => {
     if (!user || !title.trim()) return;
@@ -211,10 +222,9 @@ export function ProjectsProvider({ children }) {
         prev.map(p => p.id === id ? { ...p, title: updated.title, updated_at: updated.updated_at } : p)
       );
     } catch (err) {
-      console.error('Rename project failed:', err);
-      setSyncStatus('error');
+      recordError('Rename project failed', err);
     }
-  }, [user]);
+  }, [user, recordError]);
 
   const openModal = useCallback(() => setModalOpen(true), []);
   const closeModal = useCallback(() => setModalOpen(false), []);
@@ -225,6 +235,7 @@ export function ProjectsProvider({ children }) {
         projectList,
         activeId,
         syncStatus,
+        lastError,
         modalOpen,
         openProject,
         newProject,

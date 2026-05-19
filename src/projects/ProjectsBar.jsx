@@ -7,36 +7,41 @@ import Tooltip from '../components/Tooltip';
 
 const ACCENT = '#c73a3a';
 
-function SyncPill({ status }) {
-  let icon, label, color;
+function SyncPill({ status, errorMessage }) {
+  let icon, label, color, tooltip;
   switch (status) {
     case 'saving':
       icon = <Loader2 size={11} className="animate-spin" />;
       label = 'Saving…';
       color = '#888888';
+      tooltip = 'Saving to Supabase';
       break;
     case 'saved':
       icon = <Check size={11} />;
       label = 'Saved';
       color = '#6bbf6b';
+      tooltip = 'All changes synced';
       break;
     case 'error':
       icon = <AlertTriangle size={11} />;
       label = 'Sync error';
       color = ACCENT;
+      tooltip = errorMessage || 'Sync failed — see browser console for details';
       break;
     case 'offline':
       icon = <CloudOff size={11} />;
       label = 'Local only';
       color = '#888888';
+      tooltip = 'No Supabase credentials configured';
       break;
     default:
       icon = <Cloud size={11} />;
       label = 'Synced';
       color = '#888888';
+      tooltip = 'Connected';
   }
   return (
-    <Tooltip content={label} accentColor={color}>
+    <Tooltip content={tooltip} accentColor={color}>
       <span
         className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium"
         style={{
@@ -55,7 +60,7 @@ function SyncPill({ status }) {
 export default function ProjectsBar() {
   const { user, supabaseConfigured } = useAuth();
   const { analysisTitle, setAnalysisTitle } = useCharts();
-  const { syncStatus, openModal } = useProjects();
+  const { syncStatus, lastError, openModal } = useProjects();
 
   const cloudActive = supabaseConfigured && user;
 
@@ -75,7 +80,7 @@ export default function ProjectsBar() {
 
       {cloudActive && (
         <>
-          <SyncPill status={syncStatus} />
+          <SyncPill status={syncStatus} errorMessage={lastError} />
           <Tooltip content="Open projects" accentColor={ACCENT}>
             <button
               type="button"
