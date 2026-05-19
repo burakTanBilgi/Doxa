@@ -28,6 +28,35 @@ import { createClient } from '@supabase/supabase-js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..', '..');
 
+// The exact schema Doxa expects. Printed verbatim when the table is missing
+// so the user can paste it straight into the Supabase SQL editor.
+const CREATE_TABLE_SQL = `-- doxa_charts: one row per saved project, owned by the signed-in user.
+create table if not exists public.doxa_charts (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  title       text not null,
+  payload     jsonb not null default '{}'::jsonb,
+  updated_at  timestamptz not null default now()
+);
+
+-- Index for the common list query (user's rows newest first).
+create index if not exists doxa_charts_user_updated_idx
+  on public.doxa_charts (user_id, updated_at desc);
+
+-- RLS: users can only see / change their own rows.
+alter table public.doxa_charts enable row level security;
+
+drop policy if exists doxa_charts_own on public.doxa_charts;
+create policy doxa_charts_own
+  on public.doxa_charts
+  for all
+  to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- Tell PostgREST to reload its schema cache so the new table is visible.
+notify pgrst, 'reload schema';`;
+
 // ---- env loading ----------------------------------------------------------
 function loadDotEnv(path) {
   try {
@@ -103,11 +132,113 @@ async function main() {
     : SUPABASE_KEY.startsWith('eyJ') ? 'legacy JWT anon key' : 'unknown shape';
   console.log(gray(`         key shape: ${keyShape}`));
 
+  // ---- pre-auth: probe PostgREST with different header combos ------------
+  // The new sb_publishable_* keys have different acceptance rules per endpoint
+  // than legacy JWT anon keys. Try every common combination and report which
+  // one (if any) PostgREST accepts. This often pinpoints the failure mode.
+  section('PostgREST schema probe (no auth)');
+
+  const probeVariants = [
+    {
+      label: 'apikey header only',
+      headers: { apikey: SUPABASE_KEY, Accept: 'application/openapi+json' },
+    },
+    {
+      label: 'apikey header + Authorization Bearer',
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        Accept: 'application/openapi+json',
+      },
+    },
+    {
+      label: 'Authorization Bearer only',
+      headers: {
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        Accept: 'application/openapi+json',
+      },
+    },
+  ];
+
+  let workingVariant = null;
+  let openApiSpec = null;
+  for (const variant of probeVariants) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/`, { headers: variant.headers });
+      const bodyText = await res.text();
+      if (res.ok) {
+        pass(`GET /rest/v1/ with ${variant.label}`, `HTTP ${res.status}`);
+        workingVariant = variant.label;
+        try { openApiSpec = JSON.parse(bodyText); } catch { /* ignore */ }
+        break;
+      } else {
+        let body = bodyText;
+        try { body = JSON.stringify(JSON.parse(bodyText)); } catch { /* keep text */ }
+        fail(`GET /rest/v1/ with ${variant.label}`, {
+          message: `HTTP ${res.status}`,
+          status: res.status,
+          details: body.slice(0, 200),
+        });
+      }
+    } catch (err) {
+      fail(`GET /rest/v1/ with ${variant.label}`, err);
+    }
+  }
+
+  if (!workingVariant) {
+    // The /rest/v1/ root endpoint is often restricted to secret keys — that's
+    // expected and not actually a problem. What matters is whether the table
+    // endpoints accept the publishable key. Probe the actual table:
+    console.log(gray('\nThe schema endpoint is restricted (this is normal for publishable keys).'));
+    console.log(gray('Probing the actual doxa_charts table endpoint instead…\n'));
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/doxa_charts?select=id&limit=1`, {
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+      });
+      const bodyText = await res.text();
+      if (res.ok) {
+        pass(`GET /rest/v1/doxa_charts?limit=1 (anon)`, `HTTP ${res.status} — table exists and is reachable`);
+      } else {
+        let body = bodyText;
+        try { body = JSON.stringify(JSON.parse(bodyText)); } catch { /* keep text */ }
+        fail(`GET /rest/v1/doxa_charts?limit=1 (anon)`, {
+          message: `HTTP ${res.status}`,
+          status: res.status,
+          details: body.slice(0, 300),
+        });
+        if (res.status === 401 || res.status === 403) {
+          console.log(yellow('         The publishable key is being rejected by table endpoints too.'));
+          console.log(gray('         Check Supabase → Project settings → API → ensure the publishable'));
+          console.log(gray('         key is enabled. You may also need to rotate it.'));
+        } else if (res.status === 404 || /PGRST205|relation .* does not exist|find the table/i.test(body)) {
+          console.log(yellow('         The doxa_charts table does not exist in this Supabase project.'));
+          console.log(gray('\n         Fix: open Supabase → SQL editor → paste this and run it:'));
+          console.log(gray('         ────────────────────────────────────────────────────────────────'));
+          console.log(CREATE_TABLE_SQL.split('\n').map(l => gray('         ' + l)).join('\n'));
+          console.log(gray('         ────────────────────────────────────────────────────────────────'));
+          console.log(gray('         Then re-run `npm run test:smoke` to verify.'));
+        }
+      }
+    } catch (err) {
+      fail('GET /rest/v1/doxa_charts (anon)', err);
+    }
+  } else if (openApiSpec) {
+    const tables = Object.keys(openApiSpec.definitions || openApiSpec.components?.schemas || {});
+    pass(`OpenAPI spec parsed`, `${tables.length} exposed tables/views`);
+    if (tables.includes('doxa_charts')) {
+      pass('Table "doxa_charts" is exposed via the API');
+    } else {
+      fail('Table "doxa_charts" NOT exposed via the API');
+      console.log(gray(`         Visible tables: ${tables.slice(0, 10).join(', ') || '(none)'}`));
+      console.log(gray('         Likely: wrong schema, wrong name (case-sensitive), or not created.'));
+    }
+  }
+
   if (!TEST_EMAIL || !TEST_PASSWORD) {
     console.log(yellow('\nSet SUPABASE_TEST_EMAIL and SUPABASE_TEST_PASSWORD to run the authenticated round-trip:'));
     console.log(gray('  SUPABASE_TEST_EMAIL=you@example.com SUPABASE_TEST_PASSWORD=… npm run test:smoke'));
     console.log(yellow('Skipping authenticated tests.\n'));
-    process.exit(0);
+    process.exit(failures > 0 ? 1 : 0);
   }
   pass('Test credentials supplied via environment');
 

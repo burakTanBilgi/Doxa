@@ -50,7 +50,17 @@ export function ProjectsProvider({ children }) {
     const hint = err?.hint ? ` — hint: ${err.hint}` : '';
     const detail = err?.details ? ` — ${err.details}` : '';
     console.error(`${label}:`, err);
-    setLastError(`${label}: ${msg}${code}${hint}${detail}`);
+
+    // PGRST205 = PostgREST can't find the table in its schema cache. Almost
+    // always means the doxa_charts table was never created in Supabase. Show
+    // a clear setup hint instead of the raw PostgREST message.
+    if (err?.code === 'PGRST205' || /Could not find the table/i.test(msg)) {
+      setLastError(
+        'Supabase table public.doxa_charts is missing. Open Supabase → SQL editor and run the schema in supabase/schema.sql to create it.'
+      );
+    } else {
+      setLastError(`${label}: ${msg}${code}${hint}${detail}`);
+    }
     setSyncStatus('error');
   }, []);
 

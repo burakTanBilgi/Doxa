@@ -144,6 +144,23 @@ describe('ProjectsContext bootstrap', () => {
     expect(result.current.syncStatus).not.toBe('error');
   });
 
+  it('PGRST205 (missing table) is translated into a concrete setup instruction', async () => {
+    // PostgREST returns this exact code when the table isn't in its schema
+    // cache — by far the most common Doxa setup failure. The user shouldn't
+    // have to interpret the raw "schema cache" wording.
+    const err = Object.assign(new Error("Could not find the table 'public.doxa_charts' in the schema cache"), {
+      code: 'PGRST205',
+    });
+    cloudMocks.cloudListProjects.mockRejectedValue(err);
+
+    const { result } = renderHook(() => useProjects(), { wrapper: wrap });
+    await waitFor(() => expect(result.current.syncStatus).toBe('error'));
+
+    expect(result.current.lastError).toMatch(/public\.doxa_charts is missing/);
+    expect(result.current.lastError).toMatch(/supabase\/schema\.sql/);
+    expect(result.current.lastError).not.toMatch(/schema cache/i); // hide raw jargon
+  });
+
   it('error message includes Supabase code, hint, and details when present', async () => {
     // PostgREST errors come back with all four fields. We want the user to see
     // them so they can diagnose RLS / schema / permission issues at a glance.
