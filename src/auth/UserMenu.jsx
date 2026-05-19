@@ -9,13 +9,18 @@ const ACCENT = '#c73a3a';
 export default function UserMenu() {
   const { user, signOut } = useAuth();
   const triggerRef = useRef(null);
+  const popoverRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
     if (!open) return;
+    // Important: also exempt clicks landing inside the portal popover —
+    // otherwise the mousedown fires first, unmounts the portal, and the
+    // "Sign out" button never receives its click event.
     const onDocClick = (e) => {
       if (triggerRef.current && triggerRef.current.contains(e.target)) return;
+      if (popoverRef.current && popoverRef.current.contains(e.target)) return;
       setOpen(false);
     };
     const onEsc = (e) => e.key === 'Escape' && setOpen(false);
@@ -81,6 +86,7 @@ export default function UserMenu() {
 
       {open && createPortal(
         <div
+          ref={popoverRef}
           className="fixed z-[100] rounded-xl py-2 shadow-xl"
           style={{
             top: coords.top,

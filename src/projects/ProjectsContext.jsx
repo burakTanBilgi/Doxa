@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import { useCharts } from '../context/ChartContext';
+import { makeDefaultPayload } from '../context/defaultCharts';
 import {
   cloudListProjects,
   cloudLoadProject,
@@ -169,19 +170,13 @@ export function ProjectsProvider({ children }) {
 
   const newProject = useCallback(async () => {
     if (!user) return;
-    const blankPayload = {
-      doxa_version: '1.0',
-      title: 'Untitled Project',
-      description: '',
-      charts: [],
-      comparisons: [],
-      compareSelection: [],
-    };
+    const seedPayload = makeDefaultPayload('Untitled Project');
     setSyncStatus('saving');
+    setLastError('');
     try {
-      const created = await cloudCreateProject(user.id, 'Untitled Project', blankPayload);
+      const created = await cloudCreateProject(user.id, seedPayload.title, seedPayload);
       suppressUntilRef.current = Date.now() + AUTOSAVE_DEBOUNCE_MS * 2;
-      loadProject(blankPayload);
+      loadProject(seedPayload);
       setProjectList(prev => [created, ...prev]);
       setActiveId(created.id);
       setSyncStatus('saved');
@@ -228,6 +223,37 @@ export function ProjectsProvider({ children }) {
 
   const openModal = useCallback(() => setModalOpen(true), []);
   const closeModal = useCallback(() => setModalOpen(false), []);
+  const dismissError = useCallback(() => {
+    setLastError('');
+    if (syncStatus === 'error') setSyncStatus('idle');
+  }, [syncStatus]);
+
+  const retryBootstrap = useCallback(() => {
+    // Drop the StrictMode guard so the bootstrap effect runs again.
+    bootstrappedForRef.current = null;
+    setLastError('');
+    setSyncStatus('idle');
+    // Touch the user dep by forcing a no-op state change; simpler: re-trigger
+    // by toggling activeId — but that loses the active project. Instead, just
+    // manually re-run the bootstrap body inline.
+    if (!user) return;
+    (async () => {
+      setSyncStatus('saving');
+      try {
+        const list = await cloudListProjects(user.id);
+        setProjectList(list);
+        if (list.length > 0 && !activeIdRef.current) {
+          const full = await cloudLoadProject(list[0].id);
+          suppressUntilRef.current = Date.now() + AUTOSAVE_DEBOUNCE_MS * 2;
+          loadProject(full.payload || {});
+          setActiveId(list[0].id);
+        }
+        setSyncStatus('saved');
+      } catch (err) {
+        recordError('Retry failed', err);
+      }
+    })();
+  }, [user, loadProject, recordError]);
 
   return (
     <ProjectsContext.Provider
@@ -243,6 +269,8 @@ export function ProjectsProvider({ children }) {
         renameProject,
         openModal,
         closeModal,
+        dismissError,
+        retryBootstrap,
       }}
     >
       {children}

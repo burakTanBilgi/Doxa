@@ -1,4 +1,4 @@
-import { FolderOpen, Cloud, CloudOff, Loader2, Check, AlertTriangle } from 'lucide-react';
+import { FolderOpen, Cloud, CloudOff, Loader2, Check, AlertTriangle, RefreshCw, X } from 'lucide-react';
 import { useAuth } from '../auth/AuthProvider';
 import { useCharts } from '../context/ChartContext';
 import { useProjects } from './ProjectsContext';
@@ -60,11 +60,14 @@ function SyncPill({ status, errorMessage }) {
 export default function ProjectsBar() {
   const { user, supabaseConfigured } = useAuth();
   const { analysisTitle, setAnalysisTitle } = useCharts();
-  const { syncStatus, lastError, openModal } = useProjects();
+  const { syncStatus, lastError, openModal, dismissError, retryBootstrap } = useProjects();
+
+  const showError = syncStatus === 'error' && lastError;
 
   return (
+    <div className="flex flex-col gap-1 flex-shrink-0">
     <div
-      className="rounded-xl px-3 py-2 flex items-center gap-2 flex-shrink-0"
+      className="rounded-xl px-3 py-2 flex items-center gap-2"
       style={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d' }}
     >
       <input
@@ -112,6 +115,52 @@ export default function ProjectsBar() {
           <UserMenu />
         </>
       )}
+    </div>
+
+    {showError && (
+      <div
+        className="rounded-xl px-3 py-2 flex items-start gap-2"
+        style={{
+          backgroundColor: '#1a0e0e',
+          border: `1px solid ${ACCENT}`,
+        }}
+      >
+        <AlertTriangle size={14} style={{ color: ACCENT, flexShrink: 0, marginTop: 1 }} />
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] font-semibold mb-0.5" style={{ color: ACCENT }}>
+            Cloud sync failed
+          </p>
+          <p
+            className="text-[10px] break-words"
+            style={{ color: '#d0d0d0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+          >
+            {lastError}
+          </p>
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <Tooltip content="Retry" accentColor={ACCENT}>
+            <button
+              type="button"
+              onClick={retryBootstrap}
+              className="p-1 rounded-md hover:bg-black/30 transition-colors"
+              style={{ color: '#d0d0d0' }}
+            >
+              <RefreshCw size={12} />
+            </button>
+          </Tooltip>
+          <Tooltip content="Dismiss" accentColor={ACCENT}>
+            <button
+              type="button"
+              onClick={dismissError}
+              className="p-1 rounded-md hover:bg-black/30 transition-colors"
+              style={{ color: '#888888' }}
+            >
+              <X size={12} />
+            </button>
+          </Tooltip>
+        </div>
+      </div>
+    )}
     </div>
   );
 }
