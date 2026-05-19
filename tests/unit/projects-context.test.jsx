@@ -143,6 +143,25 @@ describe('ProjectsContext bootstrap', () => {
     expect(result.current.lastError).toBe('');
     expect(result.current.syncStatus).not.toBe('error');
   });
+
+  it('error message includes Supabase code, hint, and details when present', async () => {
+    // PostgREST errors come back with all four fields. We want the user to see
+    // them so they can diagnose RLS / schema / permission issues at a glance.
+    const err = Object.assign(new Error('permission denied for table doxa_charts'), {
+      code: '42501',
+      hint: 'check your RLS policies',
+      details: 'role anon cannot SELECT',
+    });
+    cloudMocks.cloudListProjects.mockRejectedValue(err);
+
+    const { result } = renderHook(() => useProjects(), { wrapper: wrap });
+    await waitFor(() => expect(result.current.syncStatus).toBe('error'));
+
+    expect(result.current.lastError).toMatch(/permission denied/);
+    expect(result.current.lastError).toMatch(/42501/);
+    expect(result.current.lastError).toMatch(/check your RLS policies/);
+    expect(result.current.lastError).toMatch(/role anon cannot SELECT/);
+  });
 });
 
 describe('ProjectsContext.newProject', () => {

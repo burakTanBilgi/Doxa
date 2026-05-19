@@ -46,8 +46,11 @@ export function ProjectsProvider({ children }) {
 
   const recordError = useCallback((label, err) => {
     const msg = err?.message || err?.error_description || String(err);
+    const code = err?.code ? ` [code ${err.code}]` : '';
+    const hint = err?.hint ? ` — hint: ${err.hint}` : '';
+    const detail = err?.details ? ` — ${err.details}` : '';
     console.error(`${label}:`, err);
-    setLastError(`${label}: ${msg}`);
+    setLastError(`${label}: ${msg}${code}${hint}${detail}`);
     setSyncStatus('error');
   }, []);
 
@@ -71,21 +74,30 @@ export function ProjectsProvider({ children }) {
     if (bootstrappedForRef.current === user.id) return;
     bootstrappedForRef.current = user.id;
 
-    let cancelled = false;
+    // Don't cancel on cleanup. Cancelling caused two problems:
+    //   1. StrictMode double-mounts cleanup the first invocation; the second
+    //      sees the StrictMode guard and skips, leaving state stuck at "saving"
+    //      because the original setState calls were bailed by cancelled=true.
+    //   2. In production it just wastes a fetch.
+    // Instead, after each await we compare userIdRef to the captured id —
+    // setState only happens if the user we're loading for is still active.
+    const expectedUserId = user.id;
+    const stillCurrent = () => userIdRef.current === expectedUserId;
+
     (async () => {
       setSyncStatus('saving');
       setLastError('');
       try {
-        const list = await cloudListProjects(user.id);
-        if (cancelled) return;
+        const list = await cloudListProjects(expectedUserId);
+        if (!stillCurrent()) return;
 
         if (list.length === 0) {
           // Seed first project from current in-memory state. Suppress the
           // 700ms post-mount autosave: serializeProject() at this moment IS
           // exactly what we just wrote, so re-writing would be wasted work.
           const payload = serializeProject();
-          const created = await cloudCreateProject(user.id, payload.title || 'Untitled Project', payload);
-          if (cancelled) return;
+          const created = await cloudCreateProject(expectedUserId, payload.title || 'Untitled Project', payload);
+          if (!stillCurrent()) return;
           suppressUntilRef.current = Date.now() + AUTOSAVE_DEBOUNCE_MS * 2;
           setProjectList([created]);
           setActiveId(created.id);
@@ -94,7 +106,7 @@ export function ProjectsProvider({ children }) {
           // Open the most recent project (list is already sorted desc).
           const top = list[0];
           const full = await cloudLoadProject(top.id);
-          if (cancelled) return;
+          if (!stillCurrent()) return;
           suppressUntilRef.current = Date.now() + AUTOSAVE_DEBOUNCE_MS * 2;
           loadProject(full.payload || {});
           setProjectList(list);
@@ -102,11 +114,9 @@ export function ProjectsProvider({ children }) {
           setSyncStatus('saved');
         }
       } catch (err) {
-        if (!cancelled) recordError('Project bootstrap failed', err);
+        if (stillCurrent()) recordError('Project bootstrap failed', err);
       }
     })();
-
-    return () => { cancelled = true; };
     // We deliberately depend only on user identity; loadProject/serializeProject
     // are stable enough and re-running bootstrap on every charts change is wrong.
     // eslint-disable-next-line react-hooks/exhaustive-deps
