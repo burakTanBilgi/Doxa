@@ -1,8 +1,13 @@
-import { useRef, useState, useEffect, useCallback, memo } from 'react';
+import { useRef, useState, useEffect, memo } from 'react';
 import { toPng, toSvg } from 'html-to-image';
-import { ChartProvider } from './context/ChartContext';
+import { ChartProvider, useCharts } from './context/ChartContext';
+import { ProjectsProvider } from './projects/ProjectsContext';
+import ProjectsBar from './projects/ProjectsBar';
+import ProjectsModal from './projects/ProjectsModal';
 import ControlPanel from './components/ControlPanel';
 import VisualizationCanvas from './components/VisualizationCanvas';
+import { useAuth } from './auth/AuthProvider';
+import LoginScreen from './auth/LoginScreen';
 
 // Memoized components to prevent unnecessary re-renders
 const MemoizedControlPanel = memo(ControlPanel);
@@ -14,8 +19,12 @@ function AppContent() {
   const rightPanelRef = useRef(null);
   const isSyncingRef = useRef(false); // Flag to prevent recursion
   const [isExporting, setIsExporting] = useState(false);
-  const [analysisTitle, setAnalysisTitle] = useState('Untitled Analysis');
-  const [analysisDescription, setAnalysisDescription] = useState('Character Profile Analysis');
+  const {
+    analysisTitle,
+    setAnalysisTitle,
+    analysisDescription,
+    setAnalysisDescription,
+  } = useCharts();
   const [mainHovered, setMainHovered] = useState(false);
   const [canvasHovered, setCanvasHovered] = useState(false);
   const [scrollSyncEnabled, setScrollSyncEnabled] = useState(true);
@@ -29,7 +38,7 @@ function AppContent() {
       const left = leftPanelRef.current;
       const right = rightPanelRef.current;
       if (!left || !right) return;
-      
+
       const atTop = left.scrollTop < 5 && right.scrollTop < 5;
       setBothAtTop(atTop);
       setRightAtTop(right.scrollTop < 5);
@@ -54,7 +63,7 @@ function AppContent() {
     // Disable scroll sync on mobile (below lg breakpoint) since only one panel is visible
     const isMobile = window.matchMedia('(max-width: 1023px)').matches;
     if (isMobile) return;
-    
+
     const left = leftPanelRef.current;
     const right = rightPanelRef.current;
     if (!left || !right) return;
@@ -63,7 +72,7 @@ function AppContent() {
     // When one is at X%, the other should also be at X%
     const syncFromLeft = () => {
       if (isSyncingRef.current) return;
-      
+
       const leftMax = left.scrollHeight - left.clientHeight;
       const rightMax = right.scrollHeight - right.clientHeight;
       if (leftMax <= 0 || rightMax <= 0) return;
@@ -71,7 +80,7 @@ function AppContent() {
       // Calculate percentage and apply to other panel
       const percent = left.scrollTop / leftMax;
       const targetRight = percent * rightMax;
-      
+
       if (Math.abs(right.scrollTop - targetRight) > 1) {
         isSyncingRef.current = true;
         right.scrollTop = targetRight;
@@ -85,7 +94,7 @@ function AppContent() {
 
     const syncFromRight = () => {
       if (isSyncingRef.current) return;
-      
+
       const leftMax = left.scrollHeight - left.clientHeight;
       const rightMax = right.scrollHeight - right.clientHeight;
       if (leftMax <= 0 || rightMax <= 0) return;
@@ -93,7 +102,7 @@ function AppContent() {
       // Calculate percentage and apply to other panel
       const percent = right.scrollTop / rightMax;
       const targetLeft = percent * leftMax;
-      
+
       if (Math.abs(left.scrollTop - targetLeft) > 1) {
         isSyncingRef.current = true;
         left.scrollTop = targetLeft;
@@ -113,7 +122,7 @@ function AppContent() {
       right.removeEventListener('scroll', syncFromRight);
     };
   }, [scrollSyncEnabled]);
-  
+
   const toggleScrollSync = () => {
     if (bothAtTop) {
       setScrollSyncEnabled(!scrollSyncEnabled);
@@ -168,9 +177,9 @@ function AppContent() {
       {/* Mobile tab switcher */}
       <div className="lg:hidden flex items-center justify-between px-3 pt-2 pb-1 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <img 
-            src="/logo.png" 
-            alt="Doxa" 
+          <img
+            src="/logo.png"
+            alt="Doxa"
             className="h-6 w-auto rounded logo-main"
           />
           <span className="text-sm font-bold tracking-tight font-cinzel" style={{ color: '#d0d0d0' }}>Doxa</span>
@@ -179,7 +188,7 @@ function AppContent() {
           <button
             onClick={() => setMobileTab('control')}
             className="px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all duration-200"
-            style={{ 
+            style={{
               backgroundColor: mobileTab === 'control' ? '#2d2d2d' : 'transparent',
               color: mobileTab === 'control' ? '#d0d0d0' : '#666666'
             }}
@@ -189,7 +198,7 @@ function AppContent() {
           <button
             onClick={() => setMobileTab('view')}
             className="px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all duration-200"
-            style={{ 
+            style={{
               backgroundColor: mobileTab === 'view' ? '#2d2d2d' : 'transparent',
               color: mobileTab === 'view' ? '#d0d0d0' : '#666666'
             }}
@@ -202,7 +211,7 @@ function AppContent() {
       <main className="flex-1 max-w-[1600px] w-full mx-auto px-3 py-2 overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 h-full">
           {/* Left Panel - Controls */}
-          <aside 
+          <aside
             ref={leftPanelRef}
             className={`lg:col-span-4 flex flex-col gap-2 overflow-y-auto pr-1 hide-scrollbar scroll-fade py-3 ${
               mobileTab !== 'control' ? 'hidden lg:flex' : ''
@@ -211,9 +220,9 @@ function AppContent() {
           >
             {/* Branding - desktop only (mobile has it in the tab bar) */}
             <div className="hidden lg:flex items-center gap-2 flex-shrink-0 mb-1">
-              <img 
-                src="/logo.png" 
-                alt="Doxa" 
+              <img
+                src="/logo.png"
+                alt="Doxa"
                 className="h-7 w-auto rounded-lg logo-main transition-all duration-300"
                 style={{
                   filter: canvasHovered ? 'drop-shadow(0 4px 12px rgba(199, 58, 58, 0.6))' : 'none',
@@ -225,12 +234,14 @@ function AppContent() {
               <span className="text-base font-bold tracking-tight font-cinzel" style={{ color: '#d0d0d0' }}>Doxa</span>
             </div>
 
+            <ProjectsBar />
+
             {/* Control Panel */}
-            <div 
+            <div
               className="rounded-xl p-3 flex flex-col flex-shrink-0"
               style={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', contain: 'layout style' }}
             >
-              <MemoizedControlPanel 
+              <MemoizedControlPanel
                 onExportPng={handleExportPng}
                 onExportSvg={handleExportSvg}
                 isExporting={isExporting}
@@ -250,20 +261,20 @@ function AppContent() {
             mobileTab !== 'view' ? 'hidden lg:flex' : ''
           }`}>
             {/* View Panel label - outside scroll-fade, excluded from screenshot, fades on scroll */}
-            <h2 
+            <h2
               className="hidden lg:block text-sm font-semibold uppercase tracking-wider text-right pr-3 pb-1 flex-shrink-0 transition-all duration-300"
               style={{ color: '#888888', opacity: rightAtTop ? 1 : 0, pointerEvents: rightAtTop ? 'auto' : 'none' }}
               data-html2canvas-ignore="true"
             >
               View Panel
             </h2>
-            <section 
+            <section
               ref={rightPanelRef}
               className="flex-1 relative overflow-y-auto overflow-x-hidden aesthetic-scrollbar scroll-fade py-3"
               style={{ willChange: 'scroll-position' }}
             >
-              <MemoizedVisualizationCanvas 
-                ref={canvasRef} 
+              <MemoizedVisualizationCanvas
+                ref={canvasRef}
                 analysisTitle={analysisTitle}
                 setAnalysisTitle={setAnalysisTitle}
                 analysisDescription={analysisDescription}
@@ -275,15 +286,38 @@ function AppContent() {
           </div>
         </div>
       </main>
+
+      <ProjectsModal />
     </div>
   );
 }
 
+function Gate({ children }) {
+  const { user, loading, supabaseConfigured } = useAuth();
+  if (!supabaseConfigured) return children;
+  if (loading) {
+    return (
+      <div
+        className="h-screen w-screen flex items-center justify-center"
+        style={{ backgroundColor: '#1a1a1a', color: '#888888' }}
+      >
+        <span className="text-xs uppercase tracking-wider">Loading…</span>
+      </div>
+    );
+  }
+  if (!user) return <LoginScreen />;
+  return children;
+}
+
 function App() {
   return (
-    <ChartProvider>
-      <AppContent />
-    </ChartProvider>
+    <Gate>
+      <ChartProvider>
+        <ProjectsProvider>
+          <AppContent />
+        </ProjectsProvider>
+      </ChartProvider>
+    </Gate>
   );
 }
 

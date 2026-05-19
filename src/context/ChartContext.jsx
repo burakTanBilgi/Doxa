@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { pruneSelection } from '../utils/compareCompatibility';
 
 const initialCharts = [
@@ -44,6 +44,12 @@ const ChartContext = createContext(null);
 export function ChartProvider({ children }) {
   const [charts, setCharts] = useState(initialCharts);
   const [comparisons, setComparisons] = useState([]);
+  const [analysisTitle, setAnalysisTitle] = useState('Untitled Analysis');
+  const [analysisDescription, setAnalysisDescription] = useState('Character Profile Analysis');
+  // Bumped on every loadProject() so ProjectsContext can suppress the
+  // immediate autosave that would otherwise re-write the row we just read.
+  const [loadEpoch, setLoadEpoch] = useState(0);
+  const loadEpochRef = useRef(0);
 
   const pruneAllComparisons = (nextCharts) =>
     setComparisons(prev =>
@@ -463,10 +469,53 @@ export function ChartProvider({ children }) {
     });
   };
 
+  // ---- Project payload (round-trips through Supabase) ----------------------
+  // Kept intentionally close to the live in-memory shape so Hakoniwa can read
+  // payload.charts directly (id, title, color, data[{subject,value,fullMark}]).
+  // `compareSelection` is a flat union of every chart id referenced by any
+  // comparison — a convenience for the Hakoniwa embed, derived on serialize.
+  const serializeProject = useCallback(() => {
+    const compareSelection = Array.from(
+      new Set(comparisons.flatMap(c => c.chartIds))
+    );
+    return {
+      doxa_version: '1.0',
+      title: analysisTitle,
+      description: analysisDescription,
+      charts,
+      comparisons,
+      compareSelection,
+    };
+  }, [analysisTitle, analysisDescription, charts, comparisons]);
+
+  const loadProject = useCallback((payload) => {
+    if (!payload || typeof payload !== 'object') return;
+    const nextCharts = Array.isArray(payload.charts) ? payload.charts : [];
+    const nextComparisons = Array.isArray(payload.comparisons)
+      ? payload.comparisons.map(c => ({
+          ...c,
+          chartIds: pruneSelection(nextCharts, c.chartIds || []),
+        }))
+      : [];
+    setCharts(nextCharts);
+    setComparisons(nextComparisons);
+    setAnalysisTitle(typeof payload.title === 'string' ? payload.title : 'Untitled Analysis');
+    setAnalysisDescription(typeof payload.description === 'string' ? payload.description : '');
+    loadEpochRef.current += 1;
+    setLoadEpoch(loadEpochRef.current);
+  }, []);
+
   return (
     <ChartContext.Provider
       value={{
         charts,
+        analysisTitle,
+        analysisDescription,
+        setAnalysisTitle,
+        setAnalysisDescription,
+        loadProject,
+        serializeProject,
+        loadEpoch,
         updateTraitValue,
         updateChartColor,
         addTrait,
