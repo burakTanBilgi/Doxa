@@ -62,8 +62,6 @@ export default function ProjectsBar() {
   const { analysisTitle, setAnalysisTitle } = useCharts();
   const { syncStatus, lastError, openModal } = useProjects();
 
-  const cloudActive = supabaseConfigured && user;
-
   return (
     <div
       className="rounded-xl px-3 py-2 flex items-center gap-2 flex-shrink-0"
@@ -78,7 +76,22 @@ export default function ProjectsBar() {
         style={{ color: '#d0d0d0' }}
       />
 
-      {cloudActive && (
+      {!supabaseConfigured && (
+        <Tooltip
+          content="VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY missing — set them in your env (and on Netlify) to enable cloud sync."
+          accentColor="#888888"
+        >
+          <span
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium"
+            style={{ backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d', color: '#888888' }}
+          >
+            <CloudOff size={11} />
+            Cloud sync off
+          </span>
+        </Tooltip>
+      )}
+
+      {supabaseConfigured && user && (
         <>
           <SyncPill status={syncStatus} errorMessage={lastError} />
           <Tooltip content="Open projects" accentColor={ACCENT}>

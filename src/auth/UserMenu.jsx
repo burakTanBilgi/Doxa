@@ -44,28 +44,38 @@ export default function UserMenu() {
     setOpen(o => !o);
   };
 
+  const shortEmail = label.length > 18 ? `${label.slice(0, 16)}…` : label;
+
   return (
     <>
-      <Tooltip content={label} accentColor={ACCENT}>
+      <Tooltip content={`Signed in as ${label} — click to sign out`} accentColor={ACCENT}>
         <button
           ref={triggerRef}
           type="button"
           onClick={handleOpen}
-          className="flex items-center justify-center w-7 h-7 rounded-full overflow-hidden transition-transform hover:scale-105"
+          className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 rounded-full transition-transform hover:scale-[1.02]"
           style={{
-            backgroundColor: '#3d3d3d',
-            border: `1px solid ${open ? ACCENT : '#4d4d4d'}`,
+            backgroundColor: '#1a1a1a',
+            border: `1px solid ${open ? ACCENT : '#3d3d3d'}`,
           }}
           aria-haspopup="menu"
           aria-expanded={open}
         >
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-xs font-semibold" style={{ color: '#d0d0d0' }}>
-              {initial}
-            </span>
-          )}
+          <span
+            className="flex items-center justify-center w-5 h-5 rounded-full overflow-hidden"
+            style={{ backgroundColor: '#3d3d3d' }}
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-[10px] font-semibold" style={{ color: '#d0d0d0' }}>
+                {initial}
+              </span>
+            )}
+          </span>
+          <span className="text-[10px] font-medium hidden sm:inline" style={{ color: '#d0d0d0' }}>
+            {shortEmail}
+          </span>
         </button>
       </Tooltip>
 
