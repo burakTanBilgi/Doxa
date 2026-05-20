@@ -2,10 +2,10 @@ import { useRef, useState, useEffect, memo } from 'react';
 import { toPng, toSvg } from 'html-to-image';
 import { ChartProvider, useCharts } from './context/ChartContext';
 import { ProjectsProvider } from './projects/ProjectsContext';
-import ProjectsBar from './projects/ProjectsBar';
 import ProjectsModal from './projects/ProjectsModal';
 import ControlPanel from './components/ControlPanel';
 import VisualizationCanvas from './components/VisualizationCanvas';
+import TopNavbar from './components/TopNavbar';
 import { useAuth } from './auth/AuthProvider';
 import LoginScreen from './auth/LoginScreen';
 
@@ -31,9 +31,25 @@ function AppContent() {
   const [bothAtTop, setBothAtTop] = useState(true);
   const [rightAtTop, setRightAtTop] = useState(true);
   const [mobileTab, setMobileTab] = useState('view'); // 'control' | 'view'
+  // Tracks the lg breakpoint. The scroll-sync + scroll-position bookkeeping
+  // (bothAtTop / rightAtTop / scroll-sync listeners) only matters on desktop
+  // where both panels are visible, so gating on this avoids running any of
+  // that math on mobile.
+  const [isLg, setIsLg] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+  );
 
-  // Check if panels are at top
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const handler = (e) => setIsLg(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  // Check if panels are at top — desktop only.
+  useEffect(() => {
+    if (!isLg) return;
     const checkAtTop = () => {
       const left = leftPanelRef.current;
       const right = rightPanelRef.current;
@@ -56,13 +72,10 @@ function AppContent() {
       if (left) left.removeEventListener('scroll', checkAtTop);
       if (right) right.removeEventListener('scroll', checkAtTop);
     };
-  }, []);
+  }, [isLg]);
 
   useEffect(() => {
-    if (!scrollSyncEnabled) return;
-    // Disable scroll sync on mobile (below lg breakpoint) since only one panel is visible
-    const isMobile = window.matchMedia('(max-width: 1023px)').matches;
-    if (isMobile) return;
+    if (!scrollSyncEnabled || !isLg) return;
 
     const left = leftPanelRef.current;
     const right = rightPanelRef.current;
@@ -121,7 +134,7 @@ function AppContent() {
       left.removeEventListener('scroll', syncFromLeft);
       right.removeEventListener('scroll', syncFromRight);
     };
-  }, [scrollSyncEnabled]);
+  }, [scrollSyncEnabled, isLg]);
 
   const toggleScrollSync = () => {
     if (bothAtTop) {
@@ -174,39 +187,12 @@ function AppContent() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: '#1a1a1a' }}>
-      {/* Mobile tab switcher */}
-      <div className="lg:hidden flex items-center justify-between px-3 pt-2 pb-1 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <img
-            src="/logo.png"
-            alt="Doxa"
-            className="h-6 w-auto rounded logo-main"
-          />
-          <span className="text-sm font-bold tracking-tight font-cinzel" style={{ color: '#d0d0d0' }}>Doxa</span>
-        </div>
-        <div className="flex gap-1">
-          <button
-            onClick={() => setMobileTab('control')}
-            className="px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all duration-200"
-            style={{
-              backgroundColor: mobileTab === 'control' ? '#2d2d2d' : 'transparent',
-              color: mobileTab === 'control' ? '#d0d0d0' : '#666666'
-            }}
-          >
-            Control
-          </button>
-          <button
-            onClick={() => setMobileTab('view')}
-            className="px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all duration-200"
-            style={{
-              backgroundColor: mobileTab === 'view' ? '#2d2d2d' : 'transparent',
-              color: mobileTab === 'view' ? '#d0d0d0' : '#666666'
-            }}
-          >
-            View
-          </button>
-        </div>
-      </div>
+      <TopNavbar
+        canvasHovered={canvasHovered}
+        onLogoHover={setMainHovered}
+        mobileTab={mobileTab}
+        onMobileTabChange={setMobileTab}
+      />
 
       <main className="flex-1 max-w-[1600px] w-full mx-auto px-3 py-2 overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 h-full">
@@ -218,24 +204,6 @@ function AppContent() {
             }`}
             style={{ willChange: 'scroll-position' }}
           >
-            {/* Branding - desktop only (mobile has it in the tab bar) */}
-            <div className="hidden lg:flex items-center gap-2 flex-shrink-0 mb-1">
-              <img
-                src="/logo.png"
-                alt="Doxa"
-                className="h-7 w-auto rounded-lg logo-main transition-all duration-300"
-                style={{
-                  filter: canvasHovered ? 'drop-shadow(0 4px 12px rgba(199, 58, 58, 0.6))' : 'none',
-                  transform: canvasHovered ? 'translateY(-2px)' : 'none'
-                }}
-                onMouseEnter={() => setMainHovered(true)}
-                onMouseLeave={() => setMainHovered(false)}
-              />
-              <span className="text-base font-bold tracking-tight font-cinzel" style={{ color: '#d0d0d0' }}>Doxa</span>
-            </div>
-
-            <ProjectsBar />
-
             {/* Control Panel */}
             <div
               className="rounded-xl p-3 flex flex-col flex-shrink-0"
@@ -260,14 +228,6 @@ function AppContent() {
           <div className={`lg:col-span-8 relative flex flex-col min-h-0 overflow-hidden ${
             mobileTab !== 'view' ? 'hidden lg:flex' : ''
           }`}>
-            {/* View Panel label - outside scroll-fade, excluded from screenshot, fades on scroll */}
-            <h2
-              className="hidden lg:block text-sm font-semibold uppercase tracking-wider text-right pr-3 pb-1 flex-shrink-0 transition-all duration-300"
-              style={{ color: '#888888', opacity: rightAtTop ? 1 : 0, pointerEvents: rightAtTop ? 'auto' : 'none' }}
-              data-html2canvas-ignore="true"
-            >
-              View Panel
-            </h2>
             <section
               ref={rightPanelRef}
               className="flex-1 relative overflow-y-auto overflow-x-hidden aesthetic-scrollbar scroll-fade py-3"
@@ -281,6 +241,7 @@ function AppContent() {
                 setAnalysisDescription={setAnalysisDescription}
                 mainHovered={mainHovered}
                 onCanvasLogoHover={setCanvasHovered}
+                viewLabelVisible={rightAtTop}
               />
             </section>
           </div>

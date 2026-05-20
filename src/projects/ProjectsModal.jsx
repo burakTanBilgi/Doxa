@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Plus, Trash2, Pencil, Copy, Check } from 'lucide-react';
+import {
+  X, Plus, Trash2, Pencil, Copy, Check,
+  FileBox, Sparkles,
+} from 'lucide-react';
 import { useProjects } from './ProjectsContext';
+import { TEMPLATES } from './templates';
+import { cloudLoadProject } from './cloud-storage';
 import Tooltip from '../components/Tooltip';
 
 const ACCENT = '#c73a3a';
@@ -20,16 +25,304 @@ function timeAgo(iso) {
   return `${day}d ago`;
 }
 
+// ---- Mini chart preview (SVG, no recharts) ---------------------------------
+// Keeps the preview cheap to render in a grid — no chart library, no layout
+// thrash. 2-trait charts render as a scatter dot; 3+ as a radar polygon.
+function MiniChart({ chart, size = 56 }) {
+  if (!chart || !Array.isArray(chart.data) || chart.data.length < 2) return null;
+  const cx = size / 2;
+  const cy = size / 2;
+  const pad = size * 0.1;
+  const r = size * 0.42;
+  const color = chart.color || '#888888';
+
+  if (chart.data.length === 2) {
+    const [a, b] = chart.data;
+    const xv = (a.value || 0) / (a.fullMark || 100);
+    const yv = (b.value || 0) / (b.fullMark || 100);
+    const x = pad + xv * (size - pad * 2);
+    const y = size - pad - yv * (size - pad * 2);
+    return (
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <rect
+          x={pad} y={pad} width={size - pad * 2} height={size - pad * 2}
+          fill="none" stroke="#3d3d3d" strokeWidth="0.6"
+        />
+        <circle cx={x} cy={y} r={3} fill={color} stroke="#1a1a1a" strokeWidth="1" />
+      </svg>
+    );
+  }
+
+  const n = chart.data.length;
+  const points = chart.data.map((trait, i) => {
+    const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+    const distance = ((trait.value || 0) / (trait.fullMark || 100)) * r;
+    return [cx + Math.cos(angle) * distance, cy + Math.sin(angle) * distance];
+  });
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#3d3d3d" strokeWidth="0.6" />
+      <circle cx={cx} cy={cy} r={r * 0.5} fill="none" stroke="#2d2d2d" strokeWidth="0.4" />
+      {chart.data.map((_, i) => {
+        const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+        return (
+          <line
+            key={i}
+            x1={cx} y1={cy}
+            x2={cx + Math.cos(angle) * r}
+            y2={cy + Math.sin(angle) * r}
+            stroke="#3d3d3d" strokeWidth="0.4"
+          />
+        );
+      })}
+      <polygon
+        points={points.map(p => p.join(',')).join(' ')}
+        fill={color} fillOpacity="0.35"
+        stroke={color} strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function PreviewArea({ payload, loading }) {
+  // A missing preview entry (undefined) is treated as still loading so the
+  // card doesn't flash an "Empty" state during the lazy fetch.
+  if (loading || payload === undefined) {
+    return <div className="h-[72px] rounded-lg bg-black/20 animate-pulse" />;
+  }
+  const charts = Array.isArray(payload?.charts) ? payload.charts : [];
+  if (charts.length === 0) {
+    return (
+      <div className="h-[72px] flex items-center justify-center" style={{ color: '#555555' }}>
+        <span className="text-[10px] uppercase tracking-wider">Empty</span>
+      </div>
+    );
+  }
+  const visible = charts.slice(0, 3);
+  const extra = charts.length - visible.length;
+  return (
+    <div className="h-[72px] flex items-center justify-center gap-1">
+      {visible.map((c) => (
+        <MiniChart key={c.id ?? `${c.title}-${c.color}`} chart={c} size={56} />
+      ))}
+      {extra > 0 && (
+        <span className="text-[9px] font-medium ml-1" style={{ color: '#888888' }}>
+          +{extra}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ---- Project card ----------------------------------------------------------
+function ProjectCard({
+  project, isActive, preview,
+  isRenaming, renameValue, onRenameChange, onCommitRename, onCancelRename,
+  isConfirmingDelete, onConfirmDelete, onCancelConfirmDelete,
+  onOpen, onStartRename, onStartConfirmDelete, onCopyId,
+  copied,
+}) {
+  const interactive = !isRenaming && !isConfirmingDelete;
+  return (
+    <div
+      className={`group relative rounded-xl flex flex-col overflow-hidden transition-all duration-150 ${
+        interactive ? 'cursor-pointer hover:-translate-y-0.5' : ''
+      }`}
+      style={{
+        backgroundColor: '#1a1a1a',
+        border: `1px solid ${isActive ? ACCENT : '#3d3d3d'}`,
+        boxShadow: isActive ? `0 0 0 1px ${ACCENT}` : 'none',
+      }}
+      onClick={() => interactive && onOpen(project.id)}
+    >
+      <div
+        className="px-3 pt-3 pb-1 border-b"
+        style={{ borderColor: '#2d2d2d', backgroundColor: '#161616' }}
+      >
+        <PreviewArea payload={preview?.payload} loading={preview?.loading} />
+      </div>
+      <div className="px-3 py-2 flex flex-col gap-0.5 min-w-0">
+        {isRenaming ? (
+          <input
+            type="text"
+            autoFocus
+            value={renameValue}
+            onChange={(e) => onRenameChange(e.target.value)}
+            onBlur={onCommitRename}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onCommitRename();
+              if (e.key === 'Escape') onCancelRename();
+            }}
+            className="w-full px-2 py-1 rounded text-sm bg-transparent border focus:outline-none"
+            style={{ color: '#d0d0d0', borderColor: ACCENT }}
+          />
+        ) : (
+          <p className="text-sm font-medium truncate" style={{ color: '#d0d0d0' }}>
+            {project.title || 'Untitled Project'}
+          </p>
+        )}
+        <p className="text-[10px] flex items-center gap-2 truncate" style={{ color: '#666666' }}>
+          <span>edited {timeAgo(project.updated_at)}</span>
+          <span className="font-mono opacity-70">{String(project.id).slice(0, 8)}</span>
+        </p>
+      </div>
+
+      {isConfirmingDelete && (
+        <div className="px-3 pb-3 flex items-center justify-end gap-1">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onConfirmDelete(project.id); }}
+            className="text-[10px] uppercase tracking-wider px-2 py-1 rounded font-semibold"
+            style={{ backgroundColor: ACCENT, color: '#ffffff' }}
+          >
+            Delete
+          </button>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onCancelConfirmDelete(); }}
+            className="text-[10px] uppercase tracking-wider px-2 py-1 rounded"
+            style={{ color: '#888888' }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {interactive && (
+        <div
+          className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Tooltip content={copied ? 'Copied!' : 'Copy ID'} accentColor={ACCENT}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onCopyId(project.id); }}
+              className="p-1 rounded-md bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors"
+              style={{ color: copied ? '#6bbf6b' : '#d0d0d0' }}
+            >
+              {copied ? <Check size={12} /> : <Copy size={12} />}
+            </button>
+          </Tooltip>
+          <Tooltip content="Rename" accentColor={ACCENT}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onStartRename(project); }}
+              className="p-1 rounded-md bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors"
+              style={{ color: '#d0d0d0' }}
+            >
+              <Pencil size={12} />
+            </button>
+          </Tooltip>
+          <Tooltip content="Delete" accentColor={ACCENT}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onStartConfirmDelete(project.id); }}
+              className="p-1 rounded-md bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors"
+              style={{ color: '#d0d0d0' }}
+            >
+              <Trash2 size={12} />
+            </button>
+          </Tooltip>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TemplateCard({ template, onUse }) {
+  const chartCount = template.payload.charts.length;
+  return (
+    <div
+      className="group rounded-xl flex flex-col overflow-hidden cursor-pointer transition-all duration-150 hover:-translate-y-0.5"
+      style={{
+        backgroundColor: '#1a1a1a',
+        border: '1px solid #3d3d3d',
+      }}
+      onClick={() => onUse(template)}
+    >
+      <div
+        className="px-3 pt-3 pb-1 border-b"
+        style={{ borderColor: '#2d2d2d', backgroundColor: '#161616' }}
+      >
+        <PreviewArea payload={template.payload} loading={false} />
+      </div>
+      <div className="px-3 py-2 flex flex-col gap-0.5 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <Sparkles size={11} style={{ color: ACCENT, flexShrink: 0 }} />
+          <p className="text-sm font-medium truncate" style={{ color: '#d0d0d0' }}>
+            {template.name}
+          </p>
+        </div>
+        <p
+          className="text-[10px] leading-snug"
+          style={{
+            color: '#888888',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {template.description}
+        </p>
+        <p className="text-[9px] uppercase tracking-wider mt-1" style={{ color: '#555555' }}>
+          {chartCount} {chartCount === 1 ? 'chart' : 'charts'}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ---- Modal ------------------------------------------------------------------
 export default function ProjectsModal() {
   const {
     modalOpen, closeModal, projectList, activeId,
-    openProject, newProject, deleteProject, renameProject,
+    openProject, newProject, newProjectFromTemplate,
+    deleteProject, renameProject,
   } = useProjects();
 
+  const [tab, setTab] = useState('projects'); // 'projects' | 'templates'
   const [renamingId, setRenamingId] = useState(null);
   const [renameValue, setRenameValue] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+  // Per-project preview cache, persists across modal opens for the session.
+  // Keyed by project id; values are { loading, payload }.
+  const [previews, setPreviews] = useState({});
+
+  // Lazy-load project payloads so each card can render its mini preview.
+  // A card whose id isn't in `previews` yet renders as "loading" — that lets
+  // us avoid a synchronous setState-in-effect to mark them upfront.
+  useEffect(() => {
+    if (!modalOpen || tab !== 'projects') return;
+    const toFetch = projectList.filter(p => !previews[p.id]);
+    if (toFetch.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      // Bounded concurrency: 4 at a time keeps the modal responsive even on
+      // accounts with many projects.
+      const queue = [...toFetch];
+      const workers = Array.from({ length: Math.min(4, queue.length) }, async () => {
+        while (queue.length > 0 && !cancelled) {
+          const p = queue.shift();
+          try {
+            const full = await cloudLoadProject(p.id);
+            if (cancelled) return;
+            setPreviews(prev => ({ ...prev, [p.id]: { loading: false, payload: full?.payload || null } }));
+          } catch (err) {
+            if (cancelled) return;
+            console.error('Project preview load failed', err);
+            setPreviews(prev => ({ ...prev, [p.id]: { loading: false, payload: null } }));
+          }
+        }
+      });
+      await Promise.all(workers);
+    })();
+    return () => { cancelled = true; };
+  }, [modalOpen, tab, projectList, previews]);
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -58,6 +351,7 @@ export default function ProjectsModal() {
   const startRename = (project) => {
     setRenamingId(project.id);
     setRenameValue(project.title || '');
+    setConfirmDeleteId(null);
   };
 
   const commitRename = () => {
@@ -68,6 +362,21 @@ export default function ProjectsModal() {
     setRenameValue('');
   };
 
+  const cancelRename = () => {
+    setRenamingId(null);
+    setRenameValue('');
+  };
+
+  const startConfirmDelete = (id) => {
+    setConfirmDeleteId(id);
+    setRenamingId(null);
+  };
+
+  const confirmDelete = (id) => {
+    deleteProject(id);
+    setConfirmDeleteId(null);
+  };
+
   return createPortal(
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center p-4"
@@ -75,18 +384,63 @@ export default function ProjectsModal() {
       onMouseDown={(e) => { if (e.target === e.currentTarget) closeModal(); }}
     >
       <div
-        className="w-full max-w-lg rounded-2xl flex flex-col"
+        className="w-full max-w-5xl rounded-2xl flex flex-col"
         style={{
           backgroundColor: '#2d2d2d',
           border: '1px solid #3d3d3d',
-          maxHeight: '80vh',
+          maxHeight: '85vh',
           boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
         }}
       >
-        <div className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: '#3d3d3d' }}>
-          <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: ACCENT }}>
-            Projects
-          </h2>
+        <div
+          className="flex items-center justify-between px-5 py-3 border-b"
+          style={{ borderColor: '#3d3d3d' }}
+        >
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: ACCENT }}>
+              Projects
+            </h2>
+            <div className="flex items-center gap-1 ml-3">
+              <button
+                type="button"
+                onClick={() => setTab('projects')}
+                className="px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider transition-colors flex items-center gap-1.5"
+                style={{
+                  backgroundColor: tab === 'projects' ? '#1a1a1a' : 'transparent',
+                  color: tab === 'projects' ? '#d0d0d0' : '#888888',
+                  border: `1px solid ${tab === 'projects' ? '#3d3d3d' : 'transparent'}`,
+                }}
+              >
+                <FileBox size={12} />
+                Your Projects
+                <span
+                  className="ml-1 px-1.5 rounded-full text-[9px]"
+                  style={{ backgroundColor: '#2d2d2d', color: '#888888' }}
+                >
+                  {projectList.length}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab('templates')}
+                className="px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider transition-colors flex items-center gap-1.5"
+                style={{
+                  backgroundColor: tab === 'templates' ? '#1a1a1a' : 'transparent',
+                  color: tab === 'templates' ? '#d0d0d0' : '#888888',
+                  border: `1px solid ${tab === 'templates' ? '#3d3d3d' : 'transparent'}`,
+                }}
+              >
+                <Sparkles size={12} />
+                Templates
+                <span
+                  className="ml-1 px-1.5 rounded-full text-[9px]"
+                  style={{ backgroundColor: '#2d2d2d', color: '#888888' }}
+                >
+                  {TEMPLATES.length}
+                </span>
+              </button>
+            </div>
+          </div>
           <Tooltip content="Close" accentColor={ACCENT}>
             <button
               type="button"
@@ -99,120 +453,62 @@ export default function ProjectsModal() {
           </Tooltip>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-2">
-          {projectList.length === 0 ? (
-            <p className="text-xs text-center py-8" style={{ color: '#888888' }}>
-              No projects yet.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-1">
-              {projectList.map(p => {
-                const isActive = p.id === activeId;
-                const isRenaming = renamingId === p.id;
-                const isConfirming = confirmDeleteId === p.id;
-                return (
-                  <li
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          {tab === 'projects' ? (
+            projectList.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2">
+                <p className="text-sm" style={{ color: '#888888' }}>No projects yet.</p>
+                <p className="text-xs" style={{ color: '#666666' }}>
+                  Create a blank project or start from a template.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {projectList.map(p => (
+                  <ProjectCard
                     key={p.id}
-                    className="group rounded-lg flex items-center gap-2 px-3 py-2 transition-colors"
-                    style={{
-                      backgroundColor: isActive ? '#1a1a1a' : 'transparent',
-                      border: `1px solid ${isActive ? ACCENT : 'transparent'}`,
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => !isRenaming && !isConfirming && openProject(p.id)}
-                      className="flex-1 text-left min-w-0"
-                    >
-                      {isRenaming ? (
-                        <input
-                          type="text"
-                          autoFocus
-                          value={renameValue}
-                          onChange={(e) => setRenameValue(e.target.value)}
-                          onBlur={commitRename}
-                          onClick={(e) => e.stopPropagation()}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') commitRename();
-                            if (e.key === 'Escape') { setRenamingId(null); setRenameValue(''); }
-                          }}
-                          className="w-full px-2 py-1 rounded text-sm bg-transparent border focus:outline-none"
-                          style={{ color: '#d0d0d0', borderColor: ACCENT }}
-                        />
-                      ) : (
-                        <>
-                          <p className="text-sm font-medium truncate" style={{ color: '#d0d0d0' }}>
-                            {p.title || 'Untitled Project'}
-                          </p>
-                          <p className="text-[10px] mt-0.5 flex items-center gap-2" style={{ color: '#666666' }}>
-                            <span>edited {timeAgo(p.updated_at)}</span>
-                            <span className="font-mono opacity-70">{String(p.id).slice(0, 8)}</span>
-                          </p>
-                        </>
-                      )}
-                    </button>
-
-                    {isConfirming ? (
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => { deleteProject(p.id); setConfirmDeleteId(null); }}
-                          className="text-[10px] uppercase tracking-wider px-2 py-1 rounded font-semibold"
-                          style={{ backgroundColor: ACCENT, color: '#ffffff' }}
-                        >
-                          Delete
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="text-[10px] uppercase tracking-wider px-2 py-1 rounded"
-                          style={{ color: '#888888' }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Tooltip content={copiedId === p.id ? 'Copied!' : 'Copy project ID'} accentColor={ACCENT}>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); handleCopyId(p.id); }}
-                            className="p-1.5 rounded-md hover:bg-black/30 transition-colors"
-                            style={{ color: copiedId === p.id ? '#6bbf6b' : '#888888' }}
-                          >
-                            {copiedId === p.id ? <Check size={13} /> : <Copy size={13} />}
-                          </button>
-                        </Tooltip>
-                        <Tooltip content="Rename" accentColor={ACCENT}>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); startRename(p); }}
-                            className="p-1.5 rounded-md hover:bg-black/30 transition-colors"
-                            style={{ color: '#888888' }}
-                          >
-                            <Pencil size={13} />
-                          </button>
-                        </Tooltip>
-                        <Tooltip content="Delete" accentColor={ACCENT}>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(p.id); }}
-                            className="p-1.5 rounded-md hover:bg-black/30 transition-colors"
-                            style={{ color: '#888888' }}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </Tooltip>
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+                    project={p}
+                    isActive={p.id === activeId}
+                    preview={previews[p.id]}
+                    isRenaming={renamingId === p.id}
+                    renameValue={renameValue}
+                    onRenameChange={setRenameValue}
+                    onCommitRename={commitRename}
+                    onCancelRename={cancelRename}
+                    isConfirmingDelete={confirmDeleteId === p.id}
+                    onConfirmDelete={confirmDelete}
+                    onCancelConfirmDelete={() => setConfirmDeleteId(null)}
+                    onOpen={openProject}
+                    onStartRename={startRename}
+                    onStartConfirmDelete={startConfirmDelete}
+                    onCopyId={handleCopyId}
+                    copied={copiedId === p.id}
+                  />
+                ))}
+              </div>
+            )
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {TEMPLATES.map(t => (
+                <TemplateCard
+                  key={t.id}
+                  template={t}
+                  onUse={newProjectFromTemplate}
+                />
+              ))}
+            </div>
           )}
         </div>
 
-        <div className="px-5 py-3 border-t flex justify-end" style={{ borderColor: '#3d3d3d' }}>
+        <div
+          className="px-5 py-3 border-t flex items-center justify-between"
+          style={{ borderColor: '#3d3d3d' }}
+        >
+          <p className="text-[10px]" style={{ color: '#666666' }}>
+            {tab === 'projects'
+              ? 'Click a project to open it. Hover for actions.'
+              : 'Click a template to create a new project from it.'}
+          </p>
           <button
             type="button"
             onClick={newProject}
@@ -220,7 +516,7 @@ export default function ProjectsModal() {
             style={{ backgroundColor: ACCENT, color: '#ffffff' }}
           >
             <Plus size={13} />
-            New project
+            New blank project
           </button>
         </div>
       </div>

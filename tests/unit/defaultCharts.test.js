@@ -1,78 +1,39 @@
 import { describe, it, expect } from 'vitest';
 import {
-  DEFAULT_CHARTS,
   DEFAULT_TITLE,
   DEFAULT_DESCRIPTION,
   makeDefaultPayload,
 } from '../../src/context/defaultCharts.js';
 
-describe('DEFAULT_CHARTS', () => {
-  it('has at least three charts so the radar/scatter switch is exercised', () => {
-    expect(DEFAULT_CHARTS.length).toBeGreaterThanOrEqual(3);
-  });
-
-  it('every chart has id / title / color / non-empty data with the trait shape', () => {
-    for (const chart of DEFAULT_CHARTS) {
-      expect(chart.id).toBeDefined();
-      expect(typeof chart.title).toBe('string');
-      expect(chart.title.length).toBeGreaterThan(0);
-      expect(chart.color).toMatch(/^#[0-9a-f]{6}$/i);
-      expect(Array.isArray(chart.data)).toBe(true);
-      expect(chart.data.length).toBeGreaterThanOrEqual(2);
-      for (const trait of chart.data) {
-        expect(typeof trait.subject).toBe('string');
-        expect(trait.subject.length).toBeGreaterThan(0);
-        expect(typeof trait.value).toBe('number');
-        expect(trait.value).toBeGreaterThanOrEqual(0);
-        expect(trait.value).toBeLessThanOrEqual(100);
-        expect(trait.fullMark).toBe(100);
-      }
-    }
-  });
-
-  it('chart ids are unique', () => {
-    const ids = DEFAULT_CHARTS.map(c => c.id);
-    expect(new Set(ids).size).toBe(ids.length);
-  });
-});
-
 describe('makeDefaultPayload', () => {
-  it('returns the exported payload shape including Hakoniwa fields', () => {
+  it('returns an empty project payload with the Hakoniwa-required fields', () => {
     const p = makeDefaultPayload();
     expect(p.doxa_version).toBe('1.0');
     expect(typeof p.title).toBe('string');
     expect(typeof p.description).toBe('string');
-    expect(Array.isArray(p.charts)).toBe(true);
-    expect(Array.isArray(p.comparisons)).toBe(true);
-    expect(Array.isArray(p.compareSelection)).toBe(true);
+    expect(p.charts).toEqual([]);
+    expect(p.comparisons).toEqual([]);
+    expect(p.compareSelection).toEqual([]);
   });
 
-  it('uses the supplied title; falls back to a default when omitted', () => {
+  it('uses the supplied title; falls back to DEFAULT_TITLE when omitted', () => {
     expect(makeDefaultPayload('My Project').title).toBe('My Project');
-    expect(makeDefaultPayload().title).toMatch(/Untitled Project/i);
+    expect(makeDefaultPayload().title).toBe(DEFAULT_TITLE);
   });
 
-  it('description matches the module default constant', () => {
+  it('description matches DEFAULT_DESCRIPTION', () => {
     expect(makeDefaultPayload().description).toBe(DEFAULT_DESCRIPTION);
   });
 
-  it('returns fresh deep copies — mutating one payload must not affect another', () => {
+  it('returns fresh arrays — mutating one payload must not affect another', () => {
     const a = makeDefaultPayload();
     const b = makeDefaultPayload();
-    a.charts[0].title = 'mutated';
-    a.charts[0].data[0].value = 999;
-    expect(b.charts[0].title).not.toBe('mutated');
-    expect(b.charts[0].data[0].value).not.toBe(999);
-  });
-
-  it('returns charts in the live in-memory shape Hakoniwa expects', () => {
-    const p = makeDefaultPayload();
-    expect(p.charts[0].data[0]).toHaveProperty('subject');
-    expect(p.charts[0].data[0]).toHaveProperty('value');
-    expect(p.charts[0].data[0]).toHaveProperty('fullMark');
-    // NOT the export format (which renames to "traits" / "name"):
-    expect(p.charts[0]).not.toHaveProperty('traits');
-    expect(p.charts[0].data[0]).not.toHaveProperty('name');
+    a.charts.push({ id: 1 });
+    a.comparisons.push({ id: 1 });
+    a.compareSelection.push(1);
+    expect(b.charts).toEqual([]);
+    expect(b.comparisons).toEqual([]);
+    expect(b.compareSelection).toEqual([]);
   });
 
   it('DEFAULT_TITLE is non-empty', () => {

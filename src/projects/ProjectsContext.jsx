@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback } f
 import { useAuth } from '../auth/AuthProvider';
 import { useCharts } from '../context/ChartContext';
 import { makeDefaultPayload } from '../context/defaultCharts';
+import { cloneTemplatePayload } from './templates';
 import {
   cloudListProjects,
   cloudLoadProject,
@@ -209,6 +210,24 @@ export function ProjectsProvider({ children }) {
     }
   }, [user, loadProject, recordError]);
 
+  const newProjectFromTemplate = useCallback(async (template) => {
+    if (!user || !template) return;
+    const seedPayload = cloneTemplatePayload(template);
+    setSyncStatus('saving');
+    setLastError('');
+    try {
+      const created = await cloudCreateProject(user.id, seedPayload.title, seedPayload);
+      suppressUntilRef.current = Date.now() + AUTOSAVE_DEBOUNCE_MS * 2;
+      loadProject(seedPayload);
+      setProjectList(prev => [created, ...prev]);
+      setActiveId(created.id);
+      setSyncStatus('saved');
+      setModalOpen(false);
+    } catch (err) {
+      recordError('New project from template failed', err);
+    }
+  }, [user, loadProject, recordError]);
+
   const deleteProject = useCallback(async (id) => {
     if (!user) return;
     try {
@@ -288,6 +307,7 @@ export function ProjectsProvider({ children }) {
         modalOpen,
         openProject,
         newProject,
+        newProjectFromTemplate,
         deleteProject,
         renameProject,
         openModal,

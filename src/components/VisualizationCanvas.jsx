@@ -5,13 +5,14 @@ import ChartComparison from './ChartComparison';
 import { Plus } from 'lucide-react';
 import Tooltip from './Tooltip';
 
-const VisualizationCanvas = forwardRef(function VisualizationCanvas({ 
-  analysisTitle, 
-  setAnalysisTitle, 
-  analysisDescription, 
+const VisualizationCanvas = forwardRef(function VisualizationCanvas({
+  analysisTitle,
+  setAnalysisTitle,
+  analysisDescription,
   setAnalysisDescription,
-  mainHovered, 
-  onCanvasLogoHover
+  mainHovered,
+  onCanvasLogoHover,
+  viewLabelVisible = true,
 }, ref) {
   const { charts, comparisons, reorderCharts, swapCharts, addNewChart } = useCharts();
   const [addBtnVisible, setAddBtnVisible] = useState(false);
@@ -189,18 +190,31 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
             </Tooltip>
           )}
         </div>
-        <img 
-          src="/logo.png" 
-          alt="Doxa" 
-          className="h-10 sm:h-12 w-auto logo-canvas transition-all duration-300"
-          style={{
-            opacity: mainHovered ? 1 : 0.85,
-            filter: mainHovered ? 'drop-shadow(0 4px 12px rgba(199, 58, 58, 0.6))' : 'none',
-            transform: mainHovered ? 'translateY(-2px)' : 'none'
-          }}
-          onMouseEnter={() => onCanvasLogoHover?.(true)}
-          onMouseLeave={() => onCanvasLogoHover?.(false)}
-        />
+        <div className="flex items-start gap-2 flex-shrink-0">
+          <span
+            className="hidden lg:inline text-[10px] font-semibold uppercase tracking-wider self-start mt-0.5 transition-opacity duration-300"
+            style={{
+              color: '#666666',
+              opacity: viewLabelVisible ? 1 : 0,
+              pointerEvents: viewLabelVisible ? 'auto' : 'none',
+            }}
+            data-html2canvas-ignore="true"
+          >
+            View Panel
+          </span>
+          <img
+            src="/logo.png"
+            alt="Doxa"
+            className="h-10 sm:h-12 w-auto logo-canvas transition-all duration-300"
+            style={{
+              opacity: mainHovered ? 1 : 0.85,
+              filter: mainHovered ? 'drop-shadow(0 4px 12px rgba(199, 58, 58, 0.6))' : 'none',
+              transform: mainHovered ? 'translateY(-2px)' : 'none'
+            }}
+            onMouseEnter={() => onCanvasLogoHover?.(true)}
+            onMouseLeave={() => onCanvasLogoHover?.(false)}
+          />
+        </div>
       </div>
       {comparisons.map(cmp => (
         <ChartComparison key={cmp.id} comparison={cmp} />

@@ -7,15 +7,18 @@ function wrap({ children }) {
 }
 
 describe('ChartContext: serializeProject / loadProject round-trip', () => {
-  it('seeds with defaults — non-empty title, charts, no comparisons', () => {
+  it('seeds empty — non-empty title, no charts, no comparisons', () => {
     const { result } = renderHook(() => useCharts(), { wrapper: wrap });
     expect(result.current.analysisTitle.length).toBeGreaterThan(0);
-    expect(result.current.charts.length).toBeGreaterThan(0);
+    expect(result.current.charts).toEqual([]);
     expect(result.current.comparisons).toEqual([]);
   });
 
   it('serializeProject returns the full payload shape Hakoniwa needs', () => {
     const { result } = renderHook(() => useCharts(), { wrapper: wrap });
+    // Add a chart so we can verify the live in-memory shape survives serialize.
+    act(() => { result.current.addNewChart(); });
+
     const payload = result.current.serializeProject();
 
     expect(payload).toMatchObject({
@@ -40,9 +43,9 @@ describe('ChartContext: serializeProject / loadProject round-trip', () => {
   it('compareSelection is the union of every chart id referenced by any comparison', () => {
     const { result } = renderHook(() => useCharts(), { wrapper: wrap });
 
-    // setComparisonChartIds calls pruneSelection which drops trait-incompatible
-    // charts, so we need three siblings with identical trait sets. Duplicating
-    // the first default chart twice is the cheapest way to get them.
+    // Start from a single base chart, then duplicate twice so we have three
+    // trait-compatible siblings (setComparisonChartIds prunes incompatible ids).
+    act(() => { result.current.addNewChart(); });
     const original = result.current.charts[0];
     act(() => { result.current.duplicateChart(original.id); });
     act(() => { result.current.duplicateChart(original.id); });
@@ -102,13 +105,13 @@ describe('ChartContext: serializeProject / loadProject round-trip', () => {
   it('round-trip: serialize → loadProject yields the same observable state', () => {
     const { result } = renderHook(() => useCharts(), { wrapper: wrap });
 
-    // Mutate first so we're not just round-tripping the defaults.
+    // Start from a fresh empty state, then mutate so the round-trip is non-trivial.
     act(() => { result.current.setAnalysisTitle('My Profile'); });
     act(() => { result.current.setAnalysisDescription('My description'); });
+    act(() => { result.current.addNewChart(); });
     act(() => { result.current.updateTraitValue(result.current.charts[0].id, 0, 42); });
 
-    // Duplicate the first chart to get two trait-compatible siblings for the
-    // comparison (the three default charts intentionally have disjoint traits).
+    // Duplicate the chart so the comparison has two trait-compatible siblings.
     const base = result.current.charts[0];
     act(() => { result.current.duplicateChart(base.id); });
     const a = base.id;

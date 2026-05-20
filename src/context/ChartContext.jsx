@@ -1,18 +1,11 @@
 import { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { pruneSelection } from '../utils/compareCompatibility';
-import { DEFAULT_CHARTS, DEFAULT_TITLE, DEFAULT_DESCRIPTION } from './defaultCharts';
-
-// Seeded fresh on every reload so live mutations never bleed back into the
-// shared module-level constant.
-const initialCharts = DEFAULT_CHARTS.map(c => ({
-  ...c,
-  data: c.data.map(t => ({ ...t })),
-}));
+import { DEFAULT_TITLE, DEFAULT_DESCRIPTION } from './defaultCharts';
 
 const ChartContext = createContext(null);
 
 export function ChartProvider({ children }) {
-  const [charts, setCharts] = useState(initialCharts);
+  const [charts, setCharts] = useState([]);
   const [comparisons, setComparisons] = useState([]);
   const [analysisTitle, setAnalysisTitle] = useState(DEFAULT_TITLE);
   const [analysisDescription, setAnalysisDescription] = useState(DEFAULT_DESCRIPTION);
@@ -469,8 +462,8 @@ export function ChartProvider({ children }) {
       : [];
     setCharts(nextCharts);
     setComparisons(nextComparisons);
-    setAnalysisTitle(typeof payload.title === 'string' ? payload.title : 'Untitled Analysis');
-    setAnalysisDescription(typeof payload.description === 'string' ? payload.description : '');
+    setAnalysisTitle(typeof payload.title === 'string' ? payload.title : DEFAULT_TITLE);
+    setAnalysisDescription(typeof payload.description === 'string' ? payload.description : DEFAULT_DESCRIPTION);
     loadEpochRef.current += 1;
     setLoadEpoch(loadEpochRef.current);
   }, []);

@@ -59,7 +59,7 @@ describe('ProjectsContext bootstrap', () => {
     expect(cloudMocks.cloudListProjects).not.toHaveBeenCalled();
   });
 
-  it('signed-in with empty list: seeds a new project from current in-memory state', async () => {
+  it('signed-in with empty list: seeds a blank project on first sign-in', async () => {
     cloudMocks.cloudListProjects.mockResolvedValue([]);
     cloudMocks.cloudCreateProject.mockImplementation(async (uid, title) => ({
       id: 'seeded-id',
@@ -74,8 +74,10 @@ describe('ProjectsContext bootstrap', () => {
     const [uid, title, payload] = cloudMocks.cloudCreateProject.mock.calls[0];
     expect(uid).toBe('user-abc');
     expect(title.length).toBeGreaterThan(0);
-    // Seeded with the default charts so a new account isn't an empty canvas.
-    expect(payload.charts.length).toBeGreaterThan(0);
+    // A fresh account starts EMPTY — the user picks content via templates or
+    // by adding charts manually.
+    expect(payload.charts).toEqual([]);
+    expect(payload.comparisons).toEqual([]);
     expect(result.current.activeId).toBe('seeded-id');
     expect(result.current.projectList).toEqual([{ id: 'seeded-id', title, updated_at: '2026-05-19T00:00:00Z' }]);
   });
@@ -182,7 +184,7 @@ describe('ProjectsContext bootstrap', () => {
 });
 
 describe('ProjectsContext.newProject', () => {
-  it('creates a project seeded with the default charts (not empty)', async () => {
+  it('creates a blank project (no seed content)', async () => {
     cloudMocks.cloudListProjects.mockResolvedValue([
       { id: 'existing', title: 'Existing', updated_at: '2026-05-19T00:00:00Z' },
     ]);
@@ -202,9 +204,79 @@ describe('ProjectsContext.newProject', () => {
 
     expect(cloudMocks.cloudCreateProject).toHaveBeenCalledTimes(1);
     const [, , payload] = cloudMocks.cloudCreateProject.mock.calls[0];
-    // The default Big Five / Social Dynamics / Ayran charts should be present.
-    expect(payload.charts.length).toBeGreaterThanOrEqual(3);
-    expect(payload.charts[0].data[0]).toHaveProperty('subject');
+    // Empty by design — templates are the only path to a pre-populated project.
+    expect(payload.charts).toEqual([]);
+    expect(payload.comparisons).toEqual([]);
     expect(result.current.activeId).toBe('fresh');
+  });
+});
+
+describe('ProjectsContext.newProjectFromTemplate', () => {
+  it('creates a project pre-filled from the supplied template payload', async () => {
+    cloudMocks.cloudListProjects.mockResolvedValue([
+      { id: 'existing', title: 'Existing', updated_at: '2026-05-19T00:00:00Z' },
+    ]);
+    cloudMocks.cloudLoadProject.mockResolvedValue({
+      id: 'existing', title: 'Existing', user_id: 'user-abc',
+      updated_at: '2026-05-19T00:00:00Z',
+      payload: { doxa_version: '1.0', title: 'Existing', description: '', charts: [], comparisons: [] },
+    });
+    cloudMocks.cloudCreateProject.mockImplementation(async (uid, title) => ({
+      id: 'from-template', title, updated_at: '2026-05-19T02:00:00Z',
+    }));
+
+    const { result } = renderHook(() => useProjects(), { wrapper: wrap });
+    await waitFor(() => expect(result.current.syncStatus).toBe('saved'));
+
+    const template = {
+      id: 'tmpl',
+      name: 'My Template',
+      description: 'desc',
+      payload: {
+        doxa_version: '1.0',
+        title: 'My Template',
+        description: 'desc',
+        charts: [{
+          id: 1, title: 'C', color: '#abcdef',
+          data: [
+            { subject: 'a', value: 1, fullMark: 100 },
+            { subject: 'b', value: 2, fullMark: 100 },
+            { subject: 'c', value: 3, fullMark: 100 },
+          ],
+        }],
+        comparisons: [],
+        compareSelection: [],
+      },
+    };
+
+    await act(async () => { await result.current.newProjectFromTemplate(template); });
+
+    // One call for the empty-list bootstrap-then-load? No — the list returned
+    // an existing row, so bootstrap loaded it instead of seeding. The only
+    // create call here is for the template.
+    expect(cloudMocks.cloudCreateProject).toHaveBeenCalledTimes(1);
+    const [uid, title, payload] = cloudMocks.cloudCreateProject.mock.calls[0];
+    expect(uid).toBe('user-abc');
+    expect(title).toBe('My Template');
+    expect(payload.charts).toHaveLength(1);
+    expect(payload.charts[0].data[0].subject).toBe('a');
+    expect(result.current.activeId).toBe('from-template');
+  });
+
+  it('is a no-op when the template arg is missing', async () => {
+    cloudMocks.cloudListProjects.mockResolvedValue([
+      { id: 'x', title: 'X', updated_at: '2026-05-19T00:00:00Z' },
+    ]);
+    cloudMocks.cloudLoadProject.mockResolvedValue({
+      id: 'x', title: 'X', user_id: 'user-abc', updated_at: '2026-05-19T00:00:00Z',
+      payload: { doxa_version: '1.0', title: 'X', description: '', charts: [], comparisons: [] },
+    });
+
+    const { result } = renderHook(() => useProjects(), { wrapper: wrap });
+    await waitFor(() => expect(result.current.syncStatus).toBe('saved'));
+    cloudMocks.cloudCreateProject.mockClear();
+
+    await act(async () => { await result.current.newProjectFromTemplate(null); });
+    expect(cloudMocks.cloudCreateProject).not.toHaveBeenCalled();
   });
 });
