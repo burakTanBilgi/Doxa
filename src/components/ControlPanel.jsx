@@ -984,7 +984,9 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
         {comparisons.length > 0 && (
           <div className="mb-3 space-y-2">
             {comparisons.map(cmp => (
-              <ComparisonControls key={cmp.id} comparison={cmp} />
+              <div key={cmp.id} data-sync-key={`cmp-${cmp.id}`}>
+                <ComparisonControls comparison={cmp} />
+              </div>
             ))}
           </div>
         )}
@@ -1018,7 +1020,7 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
         )}
         
         {charts.map((chart, index) => (
-          <div key={chart.id}>
+          <div key={chart.id} data-sync-key={`chart-${chart.id}`}>
             <div
               className="transition-all duration-200"
               style={{

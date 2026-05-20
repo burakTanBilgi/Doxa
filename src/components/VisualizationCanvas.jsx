@@ -217,7 +217,9 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
         </div>
       </div>
       {comparisons.map(cmp => (
-        <ChartComparison key={cmp.id} comparison={cmp} />
+        <div key={cmp.id} data-sync-key={`cmp-${cmp.id}`}>
+          <ChartComparison comparison={cmp} />
+        </div>
       ))}
       <div className="relative">
         <div 
@@ -230,7 +232,7 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
             const isSwapTarget = dropTarget?.type === 'swap' && dropTarget.index === index;
 
             return (
-              <div key={chart.id} className="relative">
+              <div key={chart.id} className="relative" data-sync-key={`chart-${chart.id}`}>
                 {/* Gap: before first chart (left edge of chart 0) */}
                 {index === 0 && isGapActive(0) && (
                   <div

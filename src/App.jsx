@@ -81,51 +81,78 @@ function AppContent() {
     const right = rightPanelRef.current;
     if (!left || !right) return;
 
-    // Sync scroll by percentage - both panels reach bottom together
-    // When one is at X%, the other should also be at X%
-    const syncFromLeft = () => {
-      if (isSyncingRef.current) return;
-
-      const leftMax = left.scrollHeight - left.clientHeight;
-      const rightMax = right.scrollHeight - right.clientHeight;
-      if (leftMax <= 0 || rightMax <= 0) return;
-
-      // Calculate percentage and apply to other panel
-      const percent = left.scrollTop / leftMax;
-      const targetRight = percent * rightMax;
-
-      if (Math.abs(right.scrollTop - targetRight) > 1) {
-        isSyncingRef.current = true;
-        right.scrollTop = targetRight;
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            isSyncingRef.current = false;
-          });
+    // Anchor-based sync. Each chart/comparison is tagged with the same
+    // data-sync-key in both panels, so we can match by entity instead of by
+    // percentage. This is what makes alignment hold when a comparison's
+    // visualization is much taller than its control card (or vice versa) —
+    // percentage sync goes off as soon as per-entity heights diverge.
+    const getAnchors = (container) => {
+      const containerTop = container.getBoundingClientRect().top;
+      const scroll = container.scrollTop;
+      const els = container.querySelectorAll('[data-sync-key]');
+      const anchors = [];
+      for (const el of els) {
+        const r = el.getBoundingClientRect();
+        anchors.push({
+          key: el.getAttribute('data-sync-key'),
+          top: r.top - containerTop + scroll,
+          height: r.height,
         });
       }
+      // Sort ascending by position (DOM order isn't guaranteed if the panel
+      // ever reorders, but we want the anchor list sorted for the linear scan).
+      anchors.sort((a, b) => a.top - b.top);
+      return anchors;
     };
 
-    const syncFromRight = () => {
-      if (isSyncingRef.current) return;
-
-      const leftMax = left.scrollHeight - left.clientHeight;
-      const rightMax = right.scrollHeight - right.clientHeight;
-      if (leftMax <= 0 || rightMax <= 0) return;
-
-      // Calculate percentage and apply to other panel
-      const percent = right.scrollTop / rightMax;
-      const targetLeft = percent * leftMax;
-
-      if (Math.abs(left.scrollTop - targetLeft) > 1) {
-        isSyncingRef.current = true;
-        left.scrollTop = targetLeft;
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            isSyncingRef.current = false;
-          });
-        });
+    const syncByAnchor = (source, target) => {
+      const sAnchors = getAnchors(source);
+      if (sAnchors.length === 0) {
+        // No entities yet — fall back to percentage so the empty-canvas case
+        // still feels reasonable.
+        const sMax = source.scrollHeight - source.clientHeight;
+        const tMax = target.scrollHeight - target.clientHeight;
+        if (sMax > 0 && tMax > 0) {
+          target.scrollTop = (source.scrollTop / sMax) * tMax;
+        }
+        return;
       }
+      const tAnchors = getAnchors(target);
+      const tMap = new Map(tAnchors.map(a => [a.key, a]));
+
+      // Active source anchor: the last one whose top <= source.scrollTop.
+      // Anything above the first anchor maps to "above target's first anchor".
+      let active = null;
+      for (const a of sAnchors) {
+        if (a.top <= source.scrollTop) active = a;
+        else break;
+      }
+      if (!active) {
+        target.scrollTop = 0;
+        return;
+      }
+      const tActive = tMap.get(active.key);
+      if (!tActive) return;
+
+      const fraction = active.height > 0
+        ? Math.max(0, Math.min(1, (source.scrollTop - active.top) / active.height))
+        : 0;
+      target.scrollTop = tActive.top + fraction * tActive.height;
     };
+
+    const wrap = (fn) => () => {
+      if (isSyncingRef.current) return;
+      isSyncingRef.current = true;
+      fn();
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          isSyncingRef.current = false;
+        });
+      });
+    };
+
+    const syncFromLeft = wrap(() => syncByAnchor(left, right));
+    const syncFromRight = wrap(() => syncByAnchor(right, left));
 
     left.addEventListener('scroll', syncFromLeft, { passive: true });
     right.addEventListener('scroll', syncFromRight, { passive: true });

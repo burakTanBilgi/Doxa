@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X, Plus, Trash2, Pencil, Copy, Check,
@@ -85,34 +85,224 @@ function MiniChart({ chart, size = 56 }) {
   );
 }
 
+// Comparison mini-preview: overlay every referenced chart's polygon in one SVG
+// so the card communicates "this is multiple charts compared", not just one.
+function MiniComparison({ comparison, charts, size = 56 }) {
+  const referenced = (comparison.chartIds || [])
+    .map(id => charts.find(c => c.id === id))
+    .filter(Boolean);
+  if (referenced.length === 0) return null;
+  const base = referenced[0];
+  if (!Array.isArray(base.data) || base.data.length < 2) return null;
+
+  const cx = size / 2;
+  const cy = size / 2;
+  const pad = size * 0.1;
+  const r = size * 0.42;
+  const n = base.data.length;
+
+  if (n === 2) {
+    return (
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <rect
+          x={pad} y={pad} width={size - pad * 2} height={size - pad * 2}
+          fill="none" stroke="#3d3d3d" strokeWidth="0.6"
+        />
+        {referenced.map((chart, i) => {
+          const [a, b] = chart.data;
+          const xv = (a.value || 0) / (a.fullMark || 100);
+          const yv = (b.value || 0) / (b.fullMark || 100);
+          const x = pad + xv * (size - pad * 2);
+          const y = size - pad - yv * (size - pad * 2);
+          return <circle key={i} cx={x} cy={y} r={3} fill={chart.color || '#888'} stroke="#1a1a1a" strokeWidth="1" />;
+        })}
+      </svg>
+    );
+  }
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#3d3d3d" strokeWidth="0.6" />
+      {base.data.map((_, i) => {
+        const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+        return (
+          <line
+            key={i}
+            x1={cx} y1={cy}
+            x2={cx + Math.cos(angle) * r}
+            y2={cy + Math.sin(angle) * r}
+            stroke="#3d3d3d" strokeWidth="0.4"
+          />
+        );
+      })}
+      {referenced.map((chart, i) => {
+        const data = chart.data.slice(0, n);
+        const points = data.map((trait, j) => {
+          const angle = (Math.PI * 2 * j) / n - Math.PI / 2;
+          const distance = ((trait.value || 0) / (trait.fullMark || 100)) * r;
+          return [cx + Math.cos(angle) * distance, cy + Math.sin(angle) * distance];
+        });
+        return (
+          <polygon
+            key={i}
+            points={points.map(p => p.join(',')).join(' ')}
+            fill={chart.color || '#888'} fillOpacity="0.22"
+            stroke={chart.color || '#888'} strokeWidth="1"
+            strokeOpacity="0.85"
+            strokeLinejoin="round"
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+// Horizontal carousel of charts + comparisons. Hidden scrollbar, peripheral
+// items fade + scale down so the centre item draws the eye. Drag-to-pan;
+// if the user actually dragged we swallow the trailing click so the card
+// doesn't open the project.
+function PreviewScroller({ items }) {
+  const containerRef = useRef(null);
+  const itemRefs = useRef([]);
+  const dragRef = useRef({ dragging: false, startX: 0, scrollLeft: 0, moved: false });
+  const [overflowing, setOverflowing] = useState(false);
+
+  const updateStyles = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const isOver = container.scrollWidth > container.clientWidth + 1;
+    setOverflowing(isOver);
+    const cRect = container.getBoundingClientRect();
+    const cCenter = cRect.left + cRect.width / 2;
+    const halfWidth = cRect.width / 2;
+    for (const el of itemRefs.current) {
+      if (!el) continue;
+      if (!isOver) {
+        el.style.transform = '';
+        el.style.opacity = '';
+        continue;
+      }
+      const r = el.getBoundingClientRect();
+      const itemCenter = r.left + r.width / 2;
+      const dist = Math.abs(itemCenter - cCenter);
+      const ratio = Math.min(1, dist / halfWidth);
+      const scale = 1 - 0.18 * ratio;
+      const opacity = 1 - 0.65 * ratio;
+      el.style.transform = `scale(${scale})`;
+      el.style.opacity = `${opacity}`;
+    }
+  }, []);
+
+  useEffect(() => {
+    updateStyles();
+    const onResize = () => updateStyles();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [items, updateStyles]);
+
+  const onScroll = () => updateStyles();
+
+  const onMouseDown = (e) => {
+    const c = containerRef.current;
+    if (!c || c.scrollWidth <= c.clientWidth) return;
+    dragRef.current = {
+      dragging: true,
+      startX: e.pageX,
+      scrollLeft: c.scrollLeft,
+      moved: false,
+    };
+  };
+  const onMouseMove = (e) => {
+    const s = dragRef.current;
+    if (!s.dragging) return;
+    const dx = e.pageX - s.startX;
+    if (Math.abs(dx) > 4) s.moved = true;
+    if (s.moved) {
+      e.preventDefault();
+      containerRef.current.scrollLeft = s.scrollLeft - dx;
+    }
+  };
+  const endDrag = () => { dragRef.current.dragging = false; };
+  // Capture-phase click swallow: if a drag occurred, stop the card's onClick
+  // (which opens the project) before it fires.
+  const onClickCapture = (e) => {
+    if (dragRef.current.moved) {
+      e.stopPropagation();
+      dragRef.current.moved = false;
+    }
+  };
+
+  const mask = overflowing
+    ? 'linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%)'
+    : undefined;
+
+  return (
+    <div
+      ref={containerRef}
+      className="h-[72px] flex items-center gap-2 px-3 overflow-x-auto hide-scrollbar select-none"
+      style={{
+        cursor: overflowing ? 'grab' : 'default',
+        WebkitMaskImage: mask,
+        maskImage: mask,
+        justifyContent: overflowing ? 'flex-start' : 'center',
+      }}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={endDrag}
+      onMouseLeave={endDrag}
+      onClickCapture={onClickCapture}
+      onScroll={onScroll}
+    >
+      {items.map((item, i) => (
+        <div
+          key={item.key}
+          ref={(el) => { itemRefs.current[i] = el; }}
+          className="flex-shrink-0 transition-[transform,opacity] duration-200 ease-out"
+          style={{ willChange: 'transform, opacity' }}
+        >
+          {item.node}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function PreviewArea({ payload, loading }) {
   // A missing preview entry (undefined) is treated as still loading so the
   // card doesn't flash an "Empty" state during the lazy fetch.
+  const items = useMemo(() => {
+    if (!payload) return [];
+    const charts = Array.isArray(payload.charts) ? payload.charts : [];
+    const comparisons = Array.isArray(payload.comparisons) ? payload.comparisons : [];
+    return [
+      ...charts.map(c => ({
+        key: `chart-${c.id ?? `${c.title}-${c.color}`}`,
+        node: <MiniChart chart={c} size={56} />,
+      })),
+      // Drop comparisons that don't reference any extant chart — they'd
+      // render as null and waste a slot in the scroller.
+      ...comparisons
+        .filter(cmp => Array.isArray(cmp.chartIds) && cmp.chartIds.some(id =>
+          charts.some(c => c.id === id)
+        ))
+        .map(cmp => ({
+          key: `cmp-${cmp.id}`,
+          node: <MiniComparison comparison={cmp} charts={charts} size={56} />,
+        })),
+    ];
+  }, [payload]);
+
   if (loading || payload === undefined) {
     return <div className="h-[72px] rounded-lg bg-black/20 animate-pulse" />;
   }
-  const charts = Array.isArray(payload?.charts) ? payload.charts : [];
-  if (charts.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="h-[72px] flex items-center justify-center" style={{ color: '#555555' }}>
         <span className="text-[10px] uppercase tracking-wider">Empty</span>
       </div>
     );
   }
-  const visible = charts.slice(0, 3);
-  const extra = charts.length - visible.length;
-  return (
-    <div className="h-[72px] flex items-center justify-center gap-1">
-      {visible.map((c) => (
-        <MiniChart key={c.id ?? `${c.title}-${c.color}`} chart={c} size={56} />
-      ))}
-      {extra > 0 && (
-        <span className="text-[9px] font-medium ml-1" style={{ color: '#888888' }}>
-          +{extra}
-        </span>
-      )}
-    </div>
-  );
+  return <PreviewScroller items={items} />;
 }
 
 // ---- Project card ----------------------------------------------------------
