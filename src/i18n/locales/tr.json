@@ -20,6 +20,8 @@
   },
   "auth": {
     "tagline": "Projelerinizi senkronize etmek için giriş yapın",
+    "continueWithGoogle": "Google ile devam et",
+    "dividerOr": "veya",
     "email": "E-posta",
     "password": "Parola",
     "working": "İşleniyor…",

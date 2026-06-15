@@ -20,6 +20,8 @@
   },
   "auth": {
     "tagline": "Sign in to sync your projects",
+    "continueWithGoogle": "Continue with Google",
+    "dividerOr": "or",
     "email": "Email",
     "password": "Password",
     "working": "Working…",
