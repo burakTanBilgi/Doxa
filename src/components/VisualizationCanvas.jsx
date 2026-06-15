@@ -1,4 +1,5 @@
 import { forwardRef, useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useCharts } from '../context/ChartContext';
 import ChartDisplay from './ChartDisplay';
 import ChartComparison from './ChartComparison';
@@ -14,6 +15,7 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
   onCanvasLogoHover,
   viewLabelVisible = true,
 }, ref) {
+  const { t } = useTranslation();
   const { charts, comparisons, reorderCharts, swapCharts, addNewChart } = useCharts();
   const [addBtnVisible, setAddBtnVisible] = useState(false);
   const gridRef = useRef(null);
@@ -151,7 +153,7 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
               autoFocus
             />
           ) : (
-            <Tooltip content="Click to edit title" accentColor="#c73a3a">
+            <Tooltip content={t('common.editTitle')} accentColor="#c73a3a">
               <h2
                 className="text-xl sm:text-2xl font-bold cursor-pointer transition-all duration-200 hover:scale-[1.02] active:scale-100"
                 style={{ color: '#c73a3a' }}
@@ -160,7 +162,7 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
                   setIsEditingTitle(true);
                 }}
               >
-                {analysisTitle || 'Untitled Analysis'}
+                {analysisTitle || t('chart.untitledAnalysis')}
               </h2>
             </Tooltip>
           )}
@@ -176,7 +178,7 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
               autoFocus
             />
           ) : (
-            <Tooltip content="Click to edit description" accentColor="#c73a3a">
+            <Tooltip content={t('common.editDescription')} accentColor="#c73a3a">
               <p
                 className="text-sm mt-1 cursor-pointer transition-all duration-200 hover:text-gray-300"
                 style={{ color: '#888888' }}
@@ -200,7 +202,7 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
             }}
             data-html2canvas-ignore="true"
           >
-            View Panel
+            {t('chart.viewPanel')}
           </span>
           <img
             src="/logo.png"
@@ -364,8 +366,8 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
       </div>
       {charts.length === 0 && (
         <div className="text-center py-12" style={{ color: '#888888' }}>
-          <p className="text-lg">No charts yet.</p>
-          <p className="text-sm mt-2">Add a chart from the control panel to get started.</p>
+          <p className="text-lg">{t('chart.emptyTitle')}</p>
+          <p className="text-sm mt-2">{t('chart.emptyHint')}</p>
         </div>
       )}
     </div>

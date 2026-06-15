@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { Check, ChevronDown } from 'lucide-react';
 import Tooltip from './Tooltip';
 
@@ -11,6 +12,7 @@ import Tooltip from './Tooltip';
 //   disabled          — if true, button is non-interactive (no other compatible chart exists)
 //   isBaselineSlot    — first slot in the comparison; cosmetic only
 export default function SlotPicker({ value, compatibleCharts, chosenIds, onChange, disabled, isBaselineSlot }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
   const wrapRef = useRef(null);
@@ -56,7 +58,7 @@ export default function SlotPicker({ value, compatibleCharts, chosenIds, onChang
   // only option" rather than an unclickable control.
   if (disabled) {
     return (
-      <Tooltip content="No other charts share these trait names" accentColor={current?.color}>
+      <Tooltip content={t('slot.noShared')} accentColor={current?.color}>
         <div
           className="flex-1 min-w-0 text-xs px-2 py-1 rounded-md truncate"
           style={{ backgroundColor: '#3d3d3d', color: '#d0d0d0', opacity: 0.8 }}
@@ -70,7 +72,7 @@ export default function SlotPicker({ value, compatibleCharts, chosenIds, onChang
   return (
     <div ref={wrapRef} className="relative flex-1 min-w-0">
       <Tooltip
-        content={isBaselineSlot ? 'Baseline (defines compatibility)' : 'Compatible chart'}
+        content={isBaselineSlot ? t('slot.baseline') : t('slot.compatible')}
         accentColor={current?.color}
         disabled={open}
       >
@@ -106,7 +108,7 @@ export default function SlotPicker({ value, compatibleCharts, chosenIds, onChang
           {available.length > 0 && (
             <div>
               <div className="px-2 py-1 text-[10px] uppercase tracking-wider" style={{ color: '#888888' }}>
-                Available
+                {t('slot.available')}
               </div>
               {available.map(c => {
                 const isCurrent = c.id === value;
@@ -134,10 +136,10 @@ export default function SlotPicker({ value, compatibleCharts, chosenIds, onChang
           {inComparison.length > 0 && (
             <div>
               <div className="px-2 py-1 text-[10px] uppercase tracking-wider" style={{ color: '#888888', borderTop: available.length > 0 ? '1px solid #3d3d3d' : 'none' }}>
-                In this comparison
+                {t('slot.inComparison')}
               </div>
               {inComparison.map(c => (
-                <Tooltip key={c.id} content="Already in this comparison" accentColor={c.color}>
+                <Tooltip key={c.id} content={t('slot.alreadyInComparison')} accentColor={c.color}>
                 <div
                   className="w-full flex items-center gap-2 px-2 py-1.5 text-xs italic"
                   style={{

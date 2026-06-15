@@ -42,13 +42,19 @@ beforeEach(() => {
   authState.user = { id: 'user-abc', email: 'test@example.com' };
   authState.supabaseConfigured = true;
   for (const fn of Object.values(cloudMocks)) fn.mockReset();
+  // Local-first mode mirrors signed-out work to localStorage; clear it so one
+  // test's local autosave can't hydrate the next. (tests/polyfills.js provides
+  // a complete in-memory localStorage.)
+  localStorage.clear();
 });
 
 describe('ProjectsContext bootstrap', () => {
-  it('signed-out: status is idle, no remote calls made', async () => {
+  it('signed-out (cloud available): status is local, no remote calls made', async () => {
+    // Sign-in is optional. A signed-out user works locally — no cloud calls,
+    // and the sync indicator reflects browser-local persistence.
     authState.user = null;
     const { result } = renderHook(() => useProjects(), { wrapper: wrap });
-    await waitFor(() => expect(result.current.syncStatus).toBe('idle'));
+    await waitFor(() => expect(result.current.syncStatus).toBe('local'));
     expect(cloudMocks.cloudListProjects).not.toHaveBeenCalled();
   });
 
@@ -278,5 +284,60 @@ describe('ProjectsContext.newProjectFromTemplate', () => {
 
     await act(async () => { await result.current.newProjectFromTemplate(null); });
     expect(cloudMocks.cloudCreateProject).not.toHaveBeenCalled();
+  });
+});
+
+describe('ProjectsContext local mode (signed out)', () => {
+  beforeEach(() => { authState.user = null; });
+
+  it('newProjectFromTemplate fabricates locally — no cloud call, persisted to localStorage', async () => {
+    const { result } = renderHook(() => useProjects(), { wrapper: wrap });
+    await waitFor(() => expect(result.current.syncStatus).toBe('local'));
+
+    const template = {
+      id: 'tmpl', name: 'T', description: 'd',
+      payload: {
+        doxa_version: '1.0', title: 'T', description: 'd',
+        charts: [{
+          id: 1, title: 'C', color: '#abcdef',
+          data: [
+            { subject: 'a', value: 1, fullMark: 100 },
+            { subject: 'b', value: 2, fullMark: 100 },
+            { subject: 'c', value: 3, fullMark: 100 },
+          ],
+        }],
+        comparisons: [], compareSelection: [],
+      },
+    };
+
+    await act(async () => { await result.current.newProjectFromTemplate(template); });
+
+    expect(cloudMocks.cloudCreateProject).not.toHaveBeenCalled();
+    const stored = JSON.parse(localStorage.getItem('doxa_local_project'));
+    expect(stored.charts).toHaveLength(1);
+    expect(stored.charts[0].data[0].subject).toBe('a');
+  });
+
+  it('newProject resets locally — no cloud call, blank project persisted', async () => {
+    const { result } = renderHook(() => useProjects(), { wrapper: wrap });
+    await waitFor(() => expect(result.current.syncStatus).toBe('local'));
+
+    await act(async () => { await result.current.newProject(); });
+
+    expect(cloudMocks.cloudCreateProject).not.toHaveBeenCalled();
+    const stored = JSON.parse(localStorage.getItem('doxa_local_project'));
+    expect(stored.charts).toEqual([]);
+  });
+
+  it('hydrates the editor from a previously saved local project', async () => {
+    localStorage.setItem('doxa_local_project', JSON.stringify({
+      doxa_version: '1.0', title: 'Saved Locally', description: '',
+      charts: [], comparisons: [], compareSelection: [],
+    }));
+
+    const { result } = renderHook(() => useProjects(), { wrapper: wrap });
+    await waitFor(() => expect(result.current.syncStatus).toBe('local'));
+    // No cloud round-trip happened — the project came straight from the browser.
+    expect(cloudMocks.cloudListProjects).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toPng, toSvg } from 'html-to-image';
 import { ChartProvider, useCharts } from './context/ChartContext';
 import { ProjectsProvider } from './projects/ProjectsContext';
@@ -6,14 +7,14 @@ import ProjectsModal from './projects/ProjectsModal';
 import ControlPanel from './components/ControlPanel';
 import VisualizationCanvas from './components/VisualizationCanvas';
 import TopNavbar from './components/TopNavbar';
-import { useAuth } from './auth/AuthProvider';
-import LoginScreen from './auth/LoginScreen';
+import LoginModal from './auth/LoginModal';
 
 // Memoized components to prevent unnecessary re-renders
 const MemoizedControlPanel = memo(ControlPanel);
 const MemoizedVisualizationCanvas = memo(VisualizationCanvas);
 
 function AppContent() {
+  const { t } = useTranslation();
   const canvasRef = useRef(null);
   const leftPanelRef = useRef(null);
   const rightPanelRef = useRef(null);
@@ -185,7 +186,7 @@ function AppContent() {
       link.click();
     } catch (error) {
       console.error('PNG export failed:', error);
-      alert('Failed to export PNG. Please try again.');
+      alert(t('errors.exportPngFailed'));
     } finally {
       setIsExporting(false);
     }
@@ -206,7 +207,7 @@ function AppContent() {
       link.click();
     } catch (error) {
       console.error('SVG export failed:', error);
-      alert('Failed to export SVG. Please try again.');
+      alert(t('errors.exportSvgFailed'));
     } finally {
       setIsExporting(false);
     }
@@ -276,36 +277,21 @@ function AppContent() {
       </main>
 
       <ProjectsModal />
+      <LoginModal />
     </div>
   );
 }
 
-function Gate({ children }) {
-  const { user, loading, supabaseConfigured } = useAuth();
-  if (!supabaseConfigured) return children;
-  if (loading) {
-    return (
-      <div
-        className="h-screen w-screen flex items-center justify-center"
-        style={{ backgroundColor: '#1a1a1a', color: '#888888' }}
-      >
-        <span className="text-xs uppercase tracking-wider">Loading…</span>
-      </div>
-    );
-  }
-  if (!user) return <LoginScreen />;
-  return children;
-}
-
+// Sign-in is optional: the app always renders (local-first). Cloud sync turns
+// on in the background once a session is present; signed-out work persists to
+// localStorage. The login UI is an on-demand modal (see LoginModal), not a gate.
 function App() {
   return (
-    <Gate>
-      <ChartProvider>
-        <ProjectsProvider>
-          <AppContent />
-        </ProjectsProvider>
-      </ChartProvider>
-    </Gate>
+    <ChartProvider>
+      <ProjectsProvider>
+        <AppContent />
+      </ProjectsProvider>
+    </ChartProvider>
   );
 }
 

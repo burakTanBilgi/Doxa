@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Tooltip from './Tooltip';
 
 // Italic-text description with a controlled inline editor.
@@ -14,7 +15,7 @@ import Tooltip from './Tooltip';
 //   editing           — controlled flag; parent owns it
 //   onEditingChange(b)— fires when the editor opens/closes from inside
 //   accentColor       — border tint of the input
-//   placeholder       — input placeholder
+//   placeholder       — input placeholder (falls back to a localized default)
 //   className         — passed through to wrapper
 export default function EditableDescription({
   value,
@@ -22,9 +23,10 @@ export default function EditableDescription({
   editing,
   onEditingChange,
   accentColor = '#c73a3a',
-  placeholder = 'Description...',
+  placeholder,
   className = '',
 }) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState(value || '');
   const inputRef = useRef(null);
 
@@ -68,7 +70,7 @@ export default function EditableDescription({
           else if (e.key === 'Escape') cancel();
         }}
         onMouseDown={(e) => e.stopPropagation()}
-        placeholder={placeholder}
+        placeholder={placeholder || t('common.descriptionPlaceholder')}
         rows={1}
         className={`w-full text-xs italic px-1.5 py-0.5 rounded focus:outline-none bg-transparent resize-none overflow-hidden ${className}`}
         style={{
@@ -86,7 +88,7 @@ export default function EditableDescription({
   if (!value) return null;
 
   return (
-    <Tooltip content="Click to edit description" accentColor={accentColor}>
+    <Tooltip content={t('common.editDescription')} accentColor={accentColor}>
       <p
         onClick={() => onEditingChange(true)}
         onMouseDown={(e) => e.stopPropagation()}

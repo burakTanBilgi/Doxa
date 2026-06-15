@@ -21,6 +21,12 @@ describe('makeDefaultPayload', () => {
     expect(makeDefaultPayload().title).toBe(DEFAULT_TITLE);
   });
 
+  it('honors a non-English title argument verbatim', () => {
+    // Callers pass a localized title (e.g. t('common.untitledProject')) — the
+    // payload must store exactly what it was given, not transliterate it.
+    expect(makeDefaultPayload('Adsız Proje').title).toBe('Adsız Proje');
+  });
+
   it('description matches DEFAULT_DESCRIPTION', () => {
     expect(makeDefaultPayload().description).toBe(DEFAULT_DESCRIPTION);
   });

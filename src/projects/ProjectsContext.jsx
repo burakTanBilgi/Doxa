@@ -1,8 +1,9 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
 import { useCharts } from '../context/ChartContext';
 import { makeDefaultPayload } from '../context/defaultCharts';
-import { cloneTemplatePayload } from './templates';
+import { localizeTemplatePayload } from './templates';
 import {
   cloudListProjects,
   cloudLoadProject,
@@ -10,13 +11,15 @@ import {
   cloudUpdateProject,
   cloudDeleteProject,
 } from './cloud-storage';
+import { loadLocalProject, saveLocalProject } from './local-storage';
 
 const AUTOSAVE_DEBOUNCE_MS = 700;
 
 const ProjectsContext = createContext(null);
 
 export function ProjectsProvider({ children }) {
-  const { user, supabaseConfigured } = useAuth();
+  const { t } = useTranslation();
+  const { user, loading: authLoading, supabaseConfigured } = useAuth();
   const {
     analysisTitle,
     analysisDescription,
@@ -44,6 +47,12 @@ export function ProjectsProvider({ children }) {
   // React StrictMode runs effects twice in dev. Track the user we've already
   // bootstrapped for so we don't seed two duplicate "first" projects.
   const bootstrappedForRef = useRef(null);
+  // True once we've cloud-bootstrapped at least once this session. Used to tell
+  // a fresh signed-out page load (hydrate from localStorage) apart from a
+  // cloud→local transition on sign-out (keep the editor as-is).
+  const everCloudBootstrappedRef = useRef(false);
+  // Guards the one-time hydrate of the editor from localStorage in local mode.
+  const localHydratedRef = useRef(false);
 
   const recordError = useCallback((label, err) => {
     const msg = err?.message || err?.error_description || String(err);
@@ -68,22 +77,39 @@ export function ProjectsProvider({ children }) {
   useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
   useEffect(() => { userIdRef.current = user?.id ?? null; }, [user]);
 
-  // ---- Sign-in bootstrap ---------------------------------------------------
+  // ---- Bootstrap (cloud when signed in, otherwise local) -------------------
   useEffect(() => {
-    if (!supabaseConfigured) {
-      setSyncStatus('offline');
-      return;
-    }
-    if (!user) {
+    // LOCAL MODE: no signed-in user (Supabase unconfigured, or signed out).
+    if (!supabaseConfigured || !user) {
+      // While Supabase auth is still resolving we don't yet know whether a
+      // session exists — wait so we don't flash local content over a cloud
+      // project that's about to load.
+      if (supabaseConfigured && authLoading) return;
+
       setProjectList([]);
       setActiveId(null);
-      setSyncStatus('idle');
-      bootstrappedForRef.current = null;
+      setSyncStatus(supabaseConfigured ? 'local' : 'offline');
+      bootstrappedForRef.current = null; // let a future sign-in re-bootstrap
+
+      // Hydrate the editor from localStorage exactly once, and only on a real
+      // signed-out page load — never when transitioning cloud→local on sign
+      // out, which would clobber the work currently in the editor.
+      if (!localHydratedRef.current && !everCloudBootstrappedRef.current) {
+        localHydratedRef.current = true;
+        const saved = loadLocalProject();
+        if (saved) {
+          suppressUntilRef.current = Date.now() + AUTOSAVE_DEBOUNCE_MS * 2;
+          loadProject(saved);
+        }
+      }
       return;
     }
+
+    // CLOUD MODE: signed in.
     // StrictMode invokes this twice in dev; only run once per user id.
     if (bootstrappedForRef.current === user.id) return;
     bootstrappedForRef.current = user.id;
+    everCloudBootstrappedRef.current = true;
 
     // Don't cancel on cleanup. Cancelling caused two problems:
     //   1. StrictMode double-mounts cleanup the first invocation; the second
@@ -107,7 +133,7 @@ export function ProjectsProvider({ children }) {
           // 700ms post-mount autosave: serializeProject() at this moment IS
           // exactly what we just wrote, so re-writing would be wasted work.
           const payload = serializeProject();
-          const created = await cloudCreateProject(expectedUserId, payload.title || 'Untitled Project', payload);
+          const created = await cloudCreateProject(expectedUserId, payload.title || t('common.untitledProject'), payload);
           if (!stillCurrent()) return;
           suppressUntilRef.current = Date.now() + AUTOSAVE_DEBOUNCE_MS * 2;
           setProjectList([created]);
@@ -128,10 +154,11 @@ export function ProjectsProvider({ children }) {
         if (stillCurrent()) recordError('Project bootstrap failed', err);
       }
     })();
-    // We deliberately depend only on user identity; loadProject/serializeProject
-    // are stable enough and re-running bootstrap on every charts change is wrong.
+    // We deliberately depend only on user identity (+ auth-loading, to know
+    // when "no user" is final); loadProject/serializeProject are stable enough
+    // and re-running bootstrap on every charts change is wrong.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, supabaseConfigured]);
+  }, [user, supabaseConfigured, authLoading]);
 
   // Track loadProject epoch — bump means suppress next autosave window.
   useEffect(() => {
@@ -141,20 +168,34 @@ export function ProjectsProvider({ children }) {
     }
   }, [loadEpoch]);
 
-  // ---- Debounced autosave --------------------------------------------------
+  // ---- Debounced autosave (cloud when signed in, else localStorage) --------
   useEffect(() => {
-    if (!supabaseConfigured || !user || !activeId) return;
+    // Wait until auth has settled so we don't write the empty default over a
+    // localStorage project that's about to be hydrated.
+    if (supabaseConfigured && authLoading) return;
+    // Signed in but the project bootstrap hasn't produced an activeId yet.
+    if (user && !activeId) return;
+
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       if (Date.now() < suppressUntilRef.current) return;
-      const id = activeIdRef.current;
-      const uid = userIdRef.current;
-      if (!id || !uid) return;
       const payload = serializeProject();
+      const uid = userIdRef.current;
+      const id = activeIdRef.current;
+
+      // LOCAL MODE: persist to the browser, no network.
+      if (!uid) {
+        saveLocalProject(payload);
+        setSyncStatus(supabaseConfigured ? 'local' : 'offline');
+        return;
+      }
+
+      // CLOUD MODE.
+      if (!id) return;
       setSyncStatus('saving');
       try {
         const updated = await cloudUpdateProject(id, uid, {
-          title: payload.title || 'Untitled Project',
+          title: payload.title || t('common.untitledProject'),
           payload,
         });
         setProjectList(prev => {
@@ -174,7 +215,7 @@ export function ProjectsProvider({ children }) {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [analysisTitle, analysisDescription, charts, comparisons, activeId, user, supabaseConfigured, serializeProject, recordError]);
+  }, [analysisTitle, analysisDescription, charts, comparisons, activeId, user, authLoading, supabaseConfigured, serializeProject, recordError, t]);
 
   // ---- Actions -------------------------------------------------------------
   const openProject = useCallback(async (id) => {
@@ -193,8 +234,16 @@ export function ProjectsProvider({ children }) {
   }, [user, loadProject, recordError]);
 
   const newProject = useCallback(async () => {
-    if (!user) return;
-    const seedPayload = makeDefaultPayload('Untitled Project');
+    const seedPayload = makeDefaultPayload(t('common.untitledProject'));
+    // LOCAL MODE: load into the editor and persist to the browser immediately
+    // (don't wait for the debounced autosave, so a refresh keeps it).
+    if (!user) {
+      loadProject(seedPayload);
+      saveLocalProject(seedPayload);
+      setSyncStatus(supabaseConfigured ? 'local' : 'offline');
+      setModalOpen(false);
+      return;
+    }
     setSyncStatus('saving');
     setLastError('');
     try {
@@ -208,11 +257,19 @@ export function ProjectsProvider({ children }) {
     } catch (err) {
       recordError('New project failed', err);
     }
-  }, [user, loadProject, recordError]);
+  }, [user, supabaseConfigured, loadProject, recordError, t]);
 
   const newProjectFromTemplate = useCallback(async (template) => {
-    if (!user || !template) return;
-    const seedPayload = cloneTemplatePayload(template);
+    if (!template) return;
+    const seedPayload = localizeTemplatePayload(template, t);
+    // LOCAL MODE: fabricate the template into the editor and persist locally.
+    if (!user) {
+      loadProject(seedPayload);
+      saveLocalProject(seedPayload);
+      setSyncStatus(supabaseConfigured ? 'local' : 'offline');
+      setModalOpen(false);
+      return;
+    }
     setSyncStatus('saving');
     setLastError('');
     try {
@@ -226,7 +283,7 @@ export function ProjectsProvider({ children }) {
     } catch (err) {
       recordError('New project from template failed', err);
     }
-  }, [user, loadProject, recordError]);
+  }, [user, supabaseConfigured, loadProject, recordError, t]);
 
   const deleteProject = useCallback(async (id) => {
     if (!user) return;

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { Check, Pipette } from 'lucide-react';
 import Tooltip from './Tooltip';
 
@@ -21,6 +22,7 @@ const PRESETS = [
 //   accentColor     — used for the active-swatch ring + popover border tint (defaults to value)
 //   children        — single trigger element
 export default function ColorPicker({ value, onChange, accentColor, children }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, right: 0 });
   const wrapRef = useRef(null);
@@ -120,7 +122,7 @@ export default function ColorPicker({ value, onChange, accentColor, children }) 
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
-                  aria-label={`Pick color ${color}`}
+                  aria-label={t('color.pickColor', { hex: color })}
                 >
                   {active && <Check size={10} style={{ color: '#fff' }} />}
                 </button>
@@ -143,7 +145,7 @@ export default function ColorPicker({ value, onChange, accentColor, children }) 
               style={{ color: '#d0d0d0', flex: 1, justifyContent: 'flex-start' }}
             >
               <Pipette size={12} style={{ color: accent }} />
-              Custom...
+              {t('color.custom')}
             </button>
             <Tooltip content={value} accentColor={value}>
               <span

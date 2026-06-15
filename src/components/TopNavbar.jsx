@@ -1,44 +1,47 @@
-import { FolderOpen, Cloud, CloudOff, Loader2, Check, AlertTriangle, RefreshCw, X } from 'lucide-react';
+import { FolderOpen, Cloud, CloudOff, Loader2, Check, AlertTriangle, RefreshCw, X, LogIn, HardDrive } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
 import { useCharts } from '../context/ChartContext';
 import { useProjects } from '../projects/ProjectsContext';
 import UserMenu from '../auth/UserMenu';
+import LanguageSwitcher from './LanguageSwitcher';
 import Tooltip from './Tooltip';
 
 const ACCENT = '#c73a3a';
 
 function SyncPill({ status, errorMessage }) {
+  const { t } = useTranslation();
   let icon, label, color, tooltip;
   switch (status) {
     case 'saving':
       icon = <Loader2 size={11} className="animate-spin" />;
-      label = 'Saving…';
+      label = t('nav.sync.saving');
       color = '#888888';
-      tooltip = 'Saving to Supabase';
+      tooltip = t('nav.sync.savingTooltip');
       break;
     case 'saved':
       icon = <Check size={11} />;
-      label = 'Saved';
+      label = t('nav.sync.saved');
       color = '#6bbf6b';
-      tooltip = 'All changes synced';
+      tooltip = t('nav.sync.savedTooltip');
       break;
     case 'error':
       icon = <AlertTriangle size={11} />;
-      label = 'Sync error';
+      label = t('nav.sync.error');
       color = ACCENT;
-      tooltip = errorMessage || 'Sync failed — see browser console for details';
+      tooltip = errorMessage || t('nav.sync.errorTooltip');
       break;
     case 'offline':
       icon = <CloudOff size={11} />;
-      label = 'Local only';
+      label = t('nav.sync.offline');
       color = '#888888';
-      tooltip = 'No Supabase credentials configured';
+      tooltip = t('nav.sync.offlineTooltip');
       break;
     default:
       icon = <Cloud size={11} />;
-      label = 'Synced';
+      label = t('nav.sync.synced');
       color = '#888888';
-      tooltip = 'Connected';
+      tooltip = t('nav.sync.syncedTooltip');
   }
   return (
     <Tooltip content={tooltip} accentColor={color}>
@@ -58,7 +61,8 @@ function SyncPill({ status, errorMessage }) {
 }
 
 export default function TopNavbar({ canvasHovered, onLogoHover, mobileTab, onMobileTabChange }) {
-  const { user, supabaseConfigured } = useAuth();
+  const { t } = useTranslation();
+  const { user, supabaseConfigured, openLogin } = useAuth();
   const { analysisTitle, setAnalysisTitle } = useCharts();
   const { syncStatus, lastError, openModal, dismissError, retryBootstrap } = useProjects();
 
@@ -102,7 +106,7 @@ export default function TopNavbar({ canvasHovered, onLogoHover, mobileTab, onMob
           type="text"
           value={analysisTitle}
           onChange={(e) => setAnalysisTitle(e.target.value)}
-          placeholder="Project title"
+          placeholder={t('nav.projectTitlePlaceholder')}
           className="flex-1 min-w-0 bg-transparent text-sm font-semibold focus:outline-none px-2 py-1 rounded-md transition-colors"
           style={{ color: '#d0d0d0' }}
           onFocus={(e) => { e.currentTarget.style.backgroundColor = '#2d2d2d'; }}
@@ -121,7 +125,7 @@ export default function TopNavbar({ canvasHovered, onLogoHover, mobileTab, onMob
                 color: mobileTab === 'control' ? '#d0d0d0' : '#666666',
               }}
             >
-              Control
+              {t('nav.tabControl')}
             </button>
             <button
               type="button"
@@ -132,16 +136,20 @@ export default function TopNavbar({ canvasHovered, onLogoHover, mobileTab, onMob
                 color: mobileTab === 'view' ? '#d0d0d0' : '#666666',
               }}
             >
-              View
+              {t('nav.tabView')}
             </button>
           </div>
         )}
 
-        {/* Right: sync state + projects + account */}
+        {/* Right: language + sync state + projects + account */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Language switcher is app-wide — shown even when signed out. */}
+          <LanguageSwitcher />
+
+          {/* Cloud unavailable — work is kept locally in this browser. */}
           {!supabaseConfigured && (
             <Tooltip
-              content="VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY missing — set them in your env (and on Netlify) to enable cloud sync."
+              content={t('nav.cloudSyncOffTooltip')}
               accentColor="#888888"
             >
               <span
@@ -149,33 +157,67 @@ export default function TopNavbar({ canvasHovered, onLogoHover, mobileTab, onMob
                 style={{ backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d', color: '#888888' }}
               >
                 <CloudOff size={11} />
-                <span className="hidden sm:inline">Cloud sync off</span>
+                <span className="hidden sm:inline">{t('nav.cloudSyncOff')}</span>
               </span>
             </Tooltip>
           )}
 
+          {/* Signed in: live sync state. */}
           {supabaseConfigured && user && (
-            <>
-              <span className="hidden sm:inline-flex">
-                <SyncPill status={syncStatus} errorMessage={lastError} />
+            <span className="hidden sm:inline-flex">
+              <SyncPill status={syncStatus} errorMessage={lastError} />
+            </span>
+          )}
+
+          {/* Signed out but cloud is available: reassure that work is saved
+              locally, and offer optional sign-in for cross-device sync. */}
+          {supabaseConfigured && !user && (
+            <Tooltip content={t('nav.localSaveTooltip')} accentColor="#888888">
+              <span
+                className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium"
+                style={{ backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d', color: '#888888' }}
+              >
+                <HardDrive size={11} />
+                {t('nav.localSave')}
               </span>
-              <Tooltip content="Open projects" accentColor={ACCENT}>
-                <button
-                  type="button"
-                  onClick={openModal}
-                  className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-colors hover:bg-black/30"
-                  style={{
-                    backgroundColor: '#1a1a1a',
-                    border: '1px solid #3d3d3d',
-                    color: '#d0d0d0',
-                  }}
-                >
-                  <FolderOpen size={12} />
-                  <span className="hidden sm:inline">Projects</span>
-                </button>
-              </Tooltip>
-              <UserMenu />
-            </>
+            </Tooltip>
+          )}
+
+          {/* Projects — always available (templates + blank, local or cloud). */}
+          <Tooltip content={t('nav.openProjects')} accentColor={ACCENT}>
+            <button
+              type="button"
+              onClick={openModal}
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-colors hover:bg-black/30"
+              style={{
+                backgroundColor: '#1a1a1a',
+                border: '1px solid #3d3d3d',
+                color: '#d0d0d0',
+              }}
+            >
+              <FolderOpen size={12} />
+              <span className="hidden sm:inline">{t('nav.projects')}</span>
+            </button>
+          </Tooltip>
+
+          {/* Account: menu when signed in, an optional Sign in button when not. */}
+          {supabaseConfigured && user && <UserMenu />}
+          {supabaseConfigured && !user && (
+            <Tooltip content={t('nav.signInTooltip')} accentColor={ACCENT}>
+              <button
+                type="button"
+                onClick={openLogin}
+                className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-colors hover:bg-black/30"
+                style={{
+                  backgroundColor: '#1a1a1a',
+                  border: '1px solid #3d3d3d',
+                  color: '#d0d0d0',
+                }}
+              >
+                <LogIn size={12} />
+                <span className="hidden sm:inline">{t('nav.signIn')}</span>
+              </button>
+            </Tooltip>
           )}
         </div>
       </header>
@@ -192,7 +234,7 @@ export default function TopNavbar({ canvasHovered, onLogoHover, mobileTab, onMob
           <AlertTriangle size={14} style={{ color: ACCENT, flexShrink: 0, marginTop: 1 }} />
           <div className="flex-1 min-w-0">
             <p className="text-[11px] font-semibold mb-0.5" style={{ color: ACCENT }}>
-              Cloud sync failed
+              {t('nav.syncFailed')}
             </p>
             <p
               className="text-[10px] break-words"
@@ -202,7 +244,7 @@ export default function TopNavbar({ canvasHovered, onLogoHover, mobileTab, onMob
             </p>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
-            <Tooltip content="Retry" accentColor={ACCENT}>
+            <Tooltip content={t('nav.retry')} accentColor={ACCENT}>
               <button
                 type="button"
                 onClick={retryBootstrap}
@@ -212,7 +254,7 @@ export default function TopNavbar({ canvasHovered, onLogoHover, mobileTab, onMob
                 <RefreshCw size={12} />
               </button>
             </Tooltip>
-            <Tooltip content="Dismiss" accentColor={ACCENT}>
+            <Tooltip content={t('nav.dismiss')} accentColor={ACCENT}>
               <button
                 type="button"
                 onClick={dismissError}

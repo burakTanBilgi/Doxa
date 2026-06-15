@@ -43,8 +43,12 @@ export function exportAsJson(title, description, charts, comparisons = []) {
 
 /**
  * Export chart data as a human-readable Markdown file.
+ *
+ * `t` is the i18next translate function — only the structural vocabulary
+ * (the "Trait" header, aggregate-row labels, the fallback comparison name) is
+ * translated to the active language. User-authored text stays as-is.
  */
-export function exportAsMarkdown(title, description, charts, comparisons = []) {
+export function exportAsMarkdown(title, description, charts, comparisons = [], t) {
   let md = `# ${title}\n`;
   if (description) md += `> ${description}\n`;
   md += '\n';
@@ -71,7 +75,7 @@ export function exportAsMarkdown(title, description, charts, comparisons = []) {
     const view = sortedComparisonView(gated, cmp.slotSortMode, cmp.rowSortMode);
     if (!view) continue;
 
-    md += `## ${cmp.title || 'Comparison'}\n`;
+    md += `## ${cmp.title || t('comparison.defaultName')}\n`;
     if (cmp.description) md += `_${cmp.description}_\n\n`;
 
     const titles = view.series.map(s => s.title);
@@ -82,10 +86,10 @@ export function exportAsMarkdown(title, description, charts, comparisons = []) {
 
     const headerTail = [
       ...titles,
-      ...colAggs.map(a => a.label),
+      ...colAggs.map(a => t(`stats.${a.key}`)),
       ...(showDelta ? ['Δ'] : []),
     ];
-    md += `| Trait | ${headerTail.join(' | ')} |\n`;
+    md += `| ${t('comparison.traitHeader')} | ${headerTail.join(' | ')} |\n`;
     md += `|-------|${Array(colCount).fill('------').join('|')}|\n`;
 
     for (const trait of view.traitOrder) {
@@ -120,7 +124,7 @@ export function exportAsMarkdown(title, description, charts, comparisons = []) {
         deltaCell = formatAggregate(agg.compute(deltaPerTrait));
       }
       const cells = [...perChart, ...perCol, ...(showDelta ? [deltaCell] : [])];
-      md += `| _${agg.label}_ | ${cells.join(' | ')} |\n`;
+      md += `| _${t(`stats.${agg.key}`)}_ | ${cells.join(' | ')} |\n`;
     }
     md += '\n';
   }

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useCharts } from '../context/ChartContext';
 import { Plus, Trash2, X, ChevronDown, ChevronUp, GripVertical, Lock, Unlock, Download, Upload, Image, FileJson, FileText, FileCode, Copy, GitCompareArrows, AlignLeft, Radar } from 'lucide-react';
 import { exportAsJson, exportAsMarkdown, parseImportJson } from '../utils/exportFormats';
@@ -10,12 +11,13 @@ import useFlipReorder from '../hooks/useFlipReorder';
 import Tooltip from './Tooltip';
 import ColorPicker from './ColorPicker';
 
+// Sort-mode option lists hold i18n KEYS, resolved to text by SortMenu at render.
 const CHART_SORT_MODES = [
-  { value: 'custom', label: 'Custom (drag order)' },
-  { value: 'value-asc', label: 'Value ascending' },
-  { value: 'value-desc', label: 'Value descending' },
-  { value: 'name-asc', label: 'Name A–Z' },
-  { value: 'name-desc', label: 'Name Z–A' },
+  { value: 'custom', labelKey: 'sort.chart.custom' },
+  { value: 'value-asc', labelKey: 'sort.chart.valueAsc' },
+  { value: 'value-desc', labelKey: 'sort.chart.valueDesc' },
+  { value: 'name-asc', labelKey: 'sort.chart.nameAsc' },
+  { value: 'name-desc', labelKey: 'sort.chart.nameDesc' },
 ];
 
 // Auto-scroll when dragging near edges - finds scrollable parent automatically
@@ -94,6 +96,7 @@ function useAutoScroll(isDragging) {
 }
 
 function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDragging, dragOverIndex, onCrossChartDrop, sortLocked }) {
+  const { t } = useTranslation();
   const { updateTraitValue, removeTrait, updateTraitName, updateTraitDescription } = useCharts();
   const [isEditing, setIsEditing] = useState(false);
   const [nameInput, setNameInput] = useState(trait.subject);
@@ -170,7 +173,7 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-1">
           <Tooltip
-            content={sortLocked ? 'Sort mode active — switch to Custom to reorder manually' : 'Drag to reorder'}
+            content={sortLocked ? t('controls.sortLocked') : t('controls.dragToReorder')}
             accentColor={chart.color}
           >
             <span style={{ display: 'inline-flex' }}>
@@ -204,7 +207,7 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
               autoFocus
             />
           ) : (
-            <Tooltip content="Click to edit trait name" accentColor={chart.color}>
+            <Tooltip content={t('controls.editTraitName')} accentColor={chart.color}>
               <label
                 className="text-xs font-medium cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 interactive-text"
                 style={{ color: '#b8b8b8' }}
@@ -216,7 +219,7 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
             </Tooltip>
           )}
           {!trait.description && (
-            <Tooltip content="Add a description" accentColor={chart.color}>
+            <Tooltip content={t('common.addDescription')} accentColor={chart.color}>
               <button
                 onClick={() => setDescEditing(true)}
                 onMouseDown={(e) => e.stopPropagation()}
@@ -233,7 +236,7 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
             {trait.value}
           </span>
           {chart.data.length > 2 && (
-            <Tooltip content="Remove trait" accentColor={chart.color}>
+            <Tooltip content={t('controls.removeTrait')} accentColor={chart.color}>
               <button
                 onClick={handleDelete}
                 className="p-0.5 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-125 active:scale-90 rounded"
@@ -280,7 +283,7 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
           editing={descEditing}
           onEditingChange={setDescEditing}
           accentColor={chart.color}
-          placeholder="Describe this trait..."
+          placeholder={t('controls.traitDescriptionPlaceholder')}
         />
       </div>
     </div>
@@ -288,9 +291,11 @@ function TraitField({ chart, trait, index, onDragStart, onDragOver, onDrop, isDr
 }
 
 function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDragOver, onChartDrop, isDragTarget }) {
+  const { t } = useTranslation();
   const { updateChartColor, addTrait, removeChart, updateChartTitle, reorderTraits, transferTrait, duplicateChart, setChartSortMode, updateChartDescription } = useCharts();
   const sortMode = chart.sortMode || 'custom';
   const isSorted = sortMode !== 'custom';
+  const sortModeLabelKey = CHART_SORT_MODES.find(m => m.value === sortMode)?.labelKey;
   const displayData = sortedChartData(chart);
   const [descEditing, setDescEditing] = useState(false);
   const registerFlip = useFlipReorder([chart.id, displayData.map(t => t.subject).join('|')]);
@@ -508,11 +513,11 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
             onChange={(c) => updateChartColor(chart.id, c)}
             accentColor={chart.color}
           >
-            <Tooltip content="Change chart color" accentColor={chart.color}>
+            <Tooltip content={t('controls.changeChartColor')} accentColor={chart.color}>
               <button
                 type="button"
                 className="relative cursor-pointer flex-shrink-0 transition-transform hover:scale-110 p-0 bg-transparent border-0"
-                aria-label="Change chart color"
+                aria-label={t('controls.changeChartColor')}
               >
                 <Radar size={16} style={{ color: chart.color, flexShrink: 0 }} />
               </button>
@@ -536,7 +541,7 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
               autoFocus
             />
           ) : (
-            <Tooltip content="Click to edit chart title" accentColor={chart.color}>
+            <Tooltip content={t('controls.editChartTitle')} accentColor={chart.color}>
               <h4
                 className="font-medium text-sm cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 interactive-text"
                 style={{ color: '#d0d0d0' }}
@@ -550,7 +555,7 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
         </div>
         <div className="flex items-center gap-1">
           {!chart.description && (
-            <Tooltip content="Add a description" accentColor={chart.color}>
+            <Tooltip content={t('common.addDescription')} accentColor={chart.color}>
               <button
                 onClick={() => setDescEditing(true)}
                 onMouseDown={(e) => e.stopPropagation()}
@@ -568,9 +573,9 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
             modes={CHART_SORT_MODES}
             current={sortMode}
             onSelect={(m) => setChartSortMode(chart.id, m)}
-            title={isSorted ? `Sort: ${sortMode}` : 'Sort traits'}
+            title={isSorted ? t('controls.sortColon', { mode: t(sortModeLabelKey) }) : t('controls.sortTraits')}
           />
-          <Tooltip content="Duplicate chart" accentColor={chart.color}>
+          <Tooltip content={t('controls.duplicateChart')} accentColor={chart.color}>
             <button
               onClick={() => duplicateChart(chart.id)}
               onMouseDown={(e) => e.stopPropagation()}
@@ -582,7 +587,7 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
               <Copy size={16} />
             </button>
           </Tooltip>
-          <Tooltip content={isExpanded ? 'Collapse' : 'Expand'} accentColor={chart.color}>
+          <Tooltip content={isExpanded ? t('common.collapse') : t('common.expand')} accentColor={chart.color}>
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               onMouseDown={(e) => e.stopPropagation()}
@@ -594,7 +599,7 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
               {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
           </Tooltip>
-          <Tooltip content="Delete chart" accentColor={chart.color}>
+          <Tooltip content={t('controls.deleteChart')} accentColor={chart.color}>
             <button
               onClick={handleDeleteChart}
               onMouseDown={(e) => e.stopPropagation()}
@@ -665,7 +670,7 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
             onChange={(e) => setNewTraitName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAddTrait()}
             onMouseDown={(e) => e.stopPropagation()}
-            placeholder="New trait name..."
+            placeholder={t('controls.newTraitPlaceholder')}
             className="flex-1 text-sm px-3 py-2 rounded-xl focus:outline-none transition-all duration-200 hover:border-opacity-80 focus:scale-[1.02] cursor-text"
             style={{ 
               backgroundColor: '#3d3d3d', 
@@ -693,7 +698,7 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
             }}
           >
             <Plus size={14} />
-            Add
+            {t('common.add')}
           </button>
         </div>
       </div>
@@ -702,6 +707,7 @@ function ChartControls({ chart, index: chartIndex, onChartDragStart, onChartDrag
 }
 
 export default function ControlPanel({ onExportPng, onExportSvg, isExporting, scrollSyncEnabled, onToggleScrollSync, canToggleSync, analysisTitle, analysisDescription, setAnalysisTitle, setAnalysisDescription }) {
+  const { t } = useTranslation();
   const { charts, addNewChart, reorderCharts, importCharts, comparisons, addComparison } = useCharts();
   const [draggedChartIndex, setDraggedChartIndex] = useState(null);
   const [dropTargetIndex, setDropTargetIndex] = useState(null);
@@ -732,7 +738,7 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
   };
 
   const handleExportMarkdown = () => {
-    exportAsMarkdown(analysisTitle, analysisDescription, charts, comparisons);
+    exportAsMarkdown(analysisTitle, analysisDescription, charts, comparisons, t);
     setExportOpen(false);
   };
 
@@ -755,7 +761,7 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
         const result = parseImportJson(evt.target.result);
         setImportPrompt(result);
       } catch (err) {
-        alert('Failed to import: ' + err.message);
+        alert(t('errors.importFailed', { message: err.message }));
       }
     };
     reader.readAsText(file);
@@ -858,11 +864,11 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: '#888888' }}>Control Panel</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: '#888888' }}>{t('controls.panelTitle')}</h2>
         <div className="flex items-center gap-2">
           {/* Scroll Sync Toggle - hidden on mobile, only visible when both panels at top */}
           <Tooltip
-            content={scrollSyncEnabled ? 'Scroll sync ON (click to unlock)' : 'Scroll sync OFF (click to lock)'}
+            content={scrollSyncEnabled ? t('controls.scrollSyncOn') : t('controls.scrollSyncOff')}
             accentColor="#c73a3a"
             disabled={!canToggleSync}
           >
@@ -888,7 +894,7 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
           </Tooltip>
 
           {/* Import button */}
-          <Tooltip content="Import JSON">
+          <Tooltip content={t('controls.importJson')}>
             <button
               onClick={() => fileInputRef.current?.click()}
               className="flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
@@ -907,7 +913,7 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
 
           {/* Export dropdown */}
           <div ref={exportRef} className="relative">
-            <Tooltip content="Export" accentColor="#c73a3a" disabled={exportOpen || isExporting}>
+            <Tooltip content={t('controls.export')} accentColor="#c73a3a" disabled={exportOpen || isExporting}>
               <button
                 onClick={() => setExportOpen(!exportOpen)}
                 disabled={isExporting}
@@ -926,17 +932,17 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
                 style={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d', minWidth: '140px' }}
               >
                 <button onClick={handleExportPng} className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left transition-colors hover:bg-white/5" style={{ color: '#d0d0d0' }}>
-                  <Image size={13} style={{ color: '#c73a3a' }} /> PNG Image
+                  <Image size={13} style={{ color: '#c73a3a' }} /> {t('controls.exportPng')}
                 </button>
                 <button onClick={handleExportSvg} className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left transition-colors hover:bg-white/5" style={{ color: '#d0d0d0' }}>
-                  <FileCode size={13} style={{ color: '#c73a3a' }} /> SVG Image
+                  <FileCode size={13} style={{ color: '#c73a3a' }} /> {t('controls.exportSvg')}
                 </button>
                 <div style={{ borderTop: '1px solid #3d3d3d' }} />
                 <button onClick={handleExportJson} className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left transition-colors hover:bg-white/5" style={{ color: '#d0d0d0' }}>
-                  <FileJson size={13} style={{ color: '#888888' }} /> JSON Data
+                  <FileJson size={13} style={{ color: '#888888' }} /> {t('controls.exportJsonData')}
                 </button>
                 <button onClick={handleExportMarkdown} className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left transition-colors hover:bg-white/5" style={{ color: '#d0d0d0' }}>
-                  <FileText size={13} style={{ color: '#888888' }} /> Markdown
+                  <FileText size={13} style={{ color: '#888888' }} /> {t('controls.exportMarkdown')}
                 </button>
               </div>
             )}
@@ -951,29 +957,29 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
           style={{ backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d' }}
         >
           <p style={{ color: '#d0d0d0' }} className="mb-2">
-            Import <strong>{importPrompt.charts.length}</strong> chart{importPrompt.charts.length !== 1 ? 's' : ''} from <strong>"{importPrompt.title}"</strong>?
+            {t('controls.importPrompt', { count: importPrompt.charts.length, title: importPrompt.title })}
           </p>
           <div className="flex gap-2">
-            <button 
+            <button
               onClick={() => handleImportConfirm('replace')}
               className="flex-1 px-2 py-1.5 text-xs rounded-md transition-all hover:scale-105 active:scale-95"
               style={{ backgroundColor: '#c73a3a', color: '#ffffff' }}
             >
-              Replace All
+              {t('controls.importReplace')}
             </button>
-            <button 
+            <button
               onClick={() => handleImportConfirm('append')}
               className="flex-1 px-2 py-1.5 text-xs rounded-md transition-all hover:scale-105 active:scale-95"
               style={{ backgroundColor: '#3d3d3d', color: '#d0d0d0' }}
             >
-              Append
+              {t('controls.importAppend')}
             </button>
-            <button 
+            <button
               onClick={() => setImportPrompt(null)}
               className="px-2 py-1.5 text-xs rounded-md transition-all hover:scale-105 active:scale-95"
               style={{ color: '#888888' }}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </div>
@@ -990,7 +996,7 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
             ))}
           </div>
         )}
-        <Tooltip content="Create a new comparison" accentColor="#c73a3a">
+        <Tooltip content={t('controls.createComparison')} accentColor="#c73a3a">
           <button
             onClick={addComparison}
             className="mb-4 w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-lg transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]"
@@ -1001,7 +1007,7 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
             }}
           >
             <GitCompareArrows size={13} />
-            Add Comparison
+            {t('controls.addComparison')}
           </button>
         </Tooltip>
 
@@ -1085,7 +1091,7 @@ export default function ControlPanel({ onExportPng, onExportSvg, isExporting, sc
         onDrop={(e) => handleGapDrop(e, charts.length)}
       >
         <Plus size={18} />
-        Add New Chart
+        {t('controls.addChart')}
       </button>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { LogOut } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import Tooltip from '../components/Tooltip';
@@ -7,6 +8,7 @@ import Tooltip from '../components/Tooltip';
 const ACCENT = '#c73a3a';
 
 export default function UserMenu() {
+  const { t } = useTranslation();
   const { user, signOut } = useAuth();
   const triggerRef = useRef(null);
   const popoverRef = useRef(null);
@@ -36,7 +38,7 @@ export default function UserMenu() {
 
   const initial = (user.email || '?').slice(0, 1).toUpperCase();
   const avatarUrl = user.user_metadata?.avatar_url;
-  const label = user.email || 'Signed in';
+  const label = user.email || t('auth.signedInFallback');
 
   const handleOpen = () => {
     const rect = triggerRef.current?.getBoundingClientRect();
@@ -53,7 +55,7 @@ export default function UserMenu() {
 
   return (
     <>
-      <Tooltip content={`Signed in as ${label} — click to sign out`} accentColor={ACCENT}>
+      <Tooltip content={t('auth.userMenuTooltip', { label })} accentColor={ACCENT}>
         <button
           ref={triggerRef}
           type="button"
@@ -100,7 +102,7 @@ export default function UserMenu() {
         >
           <div className="px-3 pb-2 mb-1 border-b" style={{ borderColor: '#3d3d3d' }}>
             <p className="text-[10px] uppercase tracking-wider mb-0.5" style={{ color: '#666666' }}>
-              Signed in as
+              {t('auth.signedInAs')}
             </p>
             <p className="text-xs truncate" style={{ color: '#d0d0d0' }} title={label}>
               {label}
@@ -117,7 +119,7 @@ export default function UserMenu() {
             role="menuitem"
           >
             <LogOut size={13} />
-            Sign out
+            {t('auth.signOut')}
           </button>
         </div>,
         document.body

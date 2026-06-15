@@ -1,17 +1,19 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowUpDown, Check } from 'lucide-react';
 import Tooltip from './Tooltip';
 
 // Props:
 //   accentColor      — color used for the active row highlight and the button hover tint
-//   modes            — [{ value, label, disabled? }] (used for a single-section menu)
+//   modes            — [{ value, labelKey, disabled? }] (used for a single-section menu)
 //   current          — currently active value (single-section)
 //   onSelect(value)  — single-section selection callback
 //   sections         — optional array of { title, modes, current, onSelect } for multi-section menus
 //                      (when supplied, `modes`/`current`/`onSelect` are ignored)
-//   title            — button hover tooltip
-export default function SortMenu({ accentColor = '#c73a3a', modes, current, onSelect, sections, title = 'Sort' }) {
+//   title            — button hover tooltip (already-translated text)
+export default function SortMenu({ accentColor = '#c73a3a', modes, current, onSelect, sections, title = '' }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, right: 0 });
   const wrapRef = useRef(null);
@@ -69,7 +71,7 @@ export default function SortMenu({ accentColor = '#c73a3a', modes, current, onSe
             <span style={{ width: 12, display: 'inline-flex', justifyContent: 'center' }}>
               {active && <Check size={11} />}
             </span>
-            {m.label}
+            {t(m.labelKey)}
           </button>
         );
       })}

@@ -1,9 +1,15 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { X } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 
 const ACCENT = '#c73a3a';
 
-export default function LoginScreen() {
+// The sign-in card. Rendered inside <LoginModal/> as an optional overlay —
+// sign-in is not required to use the app. When `onClose` is supplied a close
+// button is shown and the card can be dismissed.
+export default function LoginScreen({ onClose }) {
+  const { t } = useTranslation();
   const { signInWithEmail, signUpWithEmail } = useAuth();
   const [mode, setMode] = useState('signin');
   const [email, setEmail] = useState('');
@@ -17,7 +23,7 @@ export default function LoginScreen() {
     setError('');
     setInfo('');
     if (!email || !password) {
-      setError('Email and password are required.');
+      setError(t('auth.credentialsRequired'));
       return;
     }
     setBusy(true);
@@ -26,27 +32,34 @@ export default function LoginScreen() {
     if (err) {
       setError(err.message);
     } else if (mode === 'signup' && !data?.session) {
-      setInfo('Check your inbox to confirm your email.');
+      setInfo(t('auth.confirmEmail'));
     }
     setBusy(false);
   };
 
   return (
     <div
-      className="h-screen w-screen flex items-center justify-center px-4"
-      style={{ backgroundColor: '#1a1a1a' }}
+      className="relative w-full max-w-sm rounded-2xl p-7"
+      style={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d' }}
     >
-      <div
-        className="w-full max-w-sm rounded-2xl p-7"
-        style={{ backgroundColor: '#2d2d2d', border: '1px solid #3d3d3d' }}
-      >
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t('common.close')}
+            className="absolute top-3 right-3 p-1 rounded-md hover:bg-black/30 transition-colors"
+            style={{ color: '#888888' }}
+          >
+            <X size={16} />
+          </button>
+        )}
         <div className="flex flex-col items-center mb-6">
           <img src="/logo.png" alt="Doxa" className="h-10 w-auto rounded-lg mb-2" />
           <h1 className="text-xl font-bold tracking-tight font-cinzel" style={{ color: '#d0d0d0' }}>
             Doxa
           </h1>
           <p className="text-xs mt-1" style={{ color: '#888888' }}>
-            Sign in to sync your projects
+            {t('auth.tagline')}
           </p>
         </div>
 
@@ -54,7 +67,7 @@ export default function LoginScreen() {
           <input
             type="email"
             autoComplete="email"
-            placeholder="Email"
+            placeholder={t('auth.email')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="px-3 py-2 rounded-lg text-sm focus:outline-none"
@@ -67,7 +80,7 @@ export default function LoginScreen() {
           <input
             type="password"
             autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-            placeholder="Password"
+            placeholder={t('auth.password')}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="px-3 py-2 rounded-lg text-sm focus:outline-none"
@@ -83,7 +96,7 @@ export default function LoginScreen() {
             className="py-2.5 rounded-lg text-sm font-semibold transition-all duration-150 disabled:opacity-50"
             style={{ backgroundColor: ACCENT, color: '#ffffff' }}
           >
-            {busy ? 'Working…' : mode === 'signin' ? 'Sign in' : 'Create account'}
+            {busy ? t('auth.working') : mode === 'signin' ? t('auth.signIn') : t('auth.createAccount')}
           </button>
         </form>
 
@@ -108,11 +121,8 @@ export default function LoginScreen() {
           className="block mx-auto mt-5 text-xs hover:underline"
           style={{ color: '#888888' }}
         >
-          {mode === 'signin'
-            ? "Don't have an account? Create one"
-            : 'Already have an account? Sign in'}
+          {mode === 'signin' ? t('auth.toSignup') : t('auth.toSignin')}
         </button>
-      </div>
     </div>
   );
 }

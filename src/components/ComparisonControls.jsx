@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronUp, Trash2, Copy, GitCompareArrows, Plus, X, ArrowUp, ArrowDown, GripVertical, AlignLeft } from 'lucide-react';
 import { useCharts } from '../context/ChartContext';
 import { areCompatible } from '../utils/compareCompatibility';
@@ -11,23 +12,25 @@ import ColorPicker from './ColorPicker';
 
 const ACCENT = '#c73a3a';
 
+// Sort-mode option lists hold i18n KEYS, resolved to text by SortMenu at render.
 const SLOT_SORT_MODES = [
-  { value: 'custom', label: 'Custom (manual order)' },
-  { value: 'title-asc', label: 'Title A–Z' },
-  { value: 'title-desc', label: 'Title Z–A' },
+  { value: 'custom', labelKey: 'sort.slot.custom' },
+  { value: 'title-asc', labelKey: 'sort.slot.titleAsc' },
+  { value: 'title-desc', labelKey: 'sort.slot.titleDesc' },
 ];
 
 const buildRowSortModes = (deltaAvailable) => [
-  { value: 'custom', label: 'Custom (baseline order)' },
-  { value: 'name-asc', label: 'Trait A–Z' },
-  { value: 'name-desc', label: 'Trait Z–A' },
-  { value: 'value-asc', label: 'Baseline value ascending' },
-  { value: 'value-desc', label: 'Baseline value descending' },
-  { value: 'delta-asc', label: 'Δ ascending', disabled: !deltaAvailable },
-  { value: 'delta-desc', label: 'Δ descending', disabled: !deltaAvailable },
+  { value: 'custom', labelKey: 'sort.row.custom' },
+  { value: 'name-asc', labelKey: 'sort.row.nameAsc' },
+  { value: 'name-desc', labelKey: 'sort.row.nameDesc' },
+  { value: 'value-asc', labelKey: 'sort.row.valueAsc' },
+  { value: 'value-desc', labelKey: 'sort.row.valueDesc' },
+  { value: 'delta-asc', labelKey: 'sort.row.deltaAsc', disabled: !deltaAvailable },
+  { value: 'delta-desc', labelKey: 'sort.row.deltaDesc', disabled: !deltaAvailable },
 ];
 
 export default function ComparisonControls({ comparison }) {
+  const { t } = useTranslation();
   const {
     charts,
     removeComparison,
@@ -200,11 +203,11 @@ export default function ComparisonControls({ comparison }) {
             onChange={(c) => updateComparisonColor(comparison.id, c)}
             accentColor={accent}
           >
-            <Tooltip content="Change comparison color" accentColor={accent}>
+            <Tooltip content={t('comparison.changeColor')} accentColor={accent}>
               <button
                 type="button"
                 className="relative cursor-pointer flex-shrink-0 transition-transform hover:scale-110 p-0 bg-transparent border-0"
-                aria-label="Change comparison color"
+                aria-label={t('comparison.changeColor')}
               >
                 <GitCompareArrows size={16} style={{ color: accent, flexShrink: 0 }} />
               </button>
@@ -227,7 +230,7 @@ export default function ComparisonControls({ comparison }) {
               autoFocus
             />
           ) : (
-            <Tooltip content="Click to edit comparison title" accentColor={accent}>
+            <Tooltip content={t('comparison.editTitle')} accentColor={accent}>
               <h4
                 className="font-medium text-sm cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 truncate"
                 style={{ color: '#d0d0d0' }}
@@ -240,7 +243,7 @@ export default function ComparisonControls({ comparison }) {
         </div>
         <div className="flex items-center gap-1">
           {!comparison.description && (
-            <Tooltip content="Add a description" accentColor={accent}>
+            <Tooltip content={t('common.addDescription')} accentColor={accent}>
               <button
                 onClick={() => setDescEditing(true)}
                 className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
@@ -254,16 +257,16 @@ export default function ComparisonControls({ comparison }) {
           )}
           <SortMenu
             accentColor={accent}
-            title="Sort"
+            title={t('sort.title')}
             sections={[
               {
-                title: 'Chart slots',
+                title: t('sort.slotSection'),
                 modes: SLOT_SORT_MODES,
                 current: slotSortMode,
                 onSelect: (m) => setComparisonSlotSortMode(comparison.id, m),
               },
               {
-                title: 'Trait rows',
+                title: t('sort.rowSection'),
                 modes: buildRowSortModes(comparison.chartIds.length === 2),
                 current: rowSortMode,
                 onSelect: (m) => setComparisonRowSortMode(comparison.id, m),
@@ -280,7 +283,7 @@ export default function ComparisonControls({ comparison }) {
             onToggleColumn={(k) => toggleComparisonAggregate(comparison.id, 'columns', k)}
             onToggleRow={(k) => toggleComparisonAggregate(comparison.id, 'rows', k)}
           />
-          <Tooltip content="Duplicate comparison" accentColor={accent}>
+          <Tooltip content={t('comparison.duplicate')} accentColor={accent}>
             <button
               onClick={() => duplicateComparison(comparison.id)}
               className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
@@ -291,7 +294,7 @@ export default function ComparisonControls({ comparison }) {
               <Copy size={16} />
             </button>
           </Tooltip>
-          <Tooltip content={isExpanded ? 'Collapse' : 'Expand'} accentColor={accent}>
+          <Tooltip content={isExpanded ? t('common.collapse') : t('common.expand')} accentColor={accent}>
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
@@ -302,7 +305,7 @@ export default function ComparisonControls({ comparison }) {
               {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
           </Tooltip>
-          <Tooltip content="Delete comparison" accentColor={accent}>
+          <Tooltip content={t('comparison.delete')} accentColor={accent}>
             <button
               onClick={handleDelete}
               className="p-1.5 rounded-lg transition-all duration-200 hover:scale-110 active:scale-90 cursor-pointer"
@@ -331,7 +334,7 @@ export default function ComparisonControls({ comparison }) {
         <div className="space-y-1.5">
           {comparison.chartIds.length === 0 && (
             <p className="text-xs text-center py-2" style={{ color: '#666666' }}>
-              No charts added yet. Click "+ Add chart" below.
+              {t('comparison.noChartsYet')}
             </p>
           )}
 
@@ -345,7 +348,7 @@ export default function ComparisonControls({ comparison }) {
             const canSwap = availableForSwap.length > 1;
 
             const moveTitle = slotSortActive
-              ? 'Slot sort mode active — switch to Custom to reorder manually'
+              ? t('comparison.slotSortLocked')
               : null;
 
             const isBeingDragged = draggedSlot === slotIndex;
@@ -390,7 +393,7 @@ export default function ComparisonControls({ comparison }) {
                   disabled={!canSwap}
                   isBaselineSlot={isFirst}
                 />
-                <Tooltip content={moveTitle || 'Move up'} accentColor={accent}>
+                <Tooltip content={moveTitle || t('comparison.moveUp')} accentColor={accent}>
                   <button
                     onClick={() => moveSlot(slotIndex, -1)}
                     disabled={isFirst || slotSortActive}
@@ -400,7 +403,7 @@ export default function ComparisonControls({ comparison }) {
                     <ArrowUp size={12} />
                   </button>
                 </Tooltip>
-                <Tooltip content={moveTitle || 'Move down'} accentColor={accent}>
+                <Tooltip content={moveTitle || t('comparison.moveDown')} accentColor={accent}>
                   <button
                     onClick={() => moveSlot(slotIndex, 1)}
                     disabled={isLast || slotSortActive}
@@ -410,7 +413,7 @@ export default function ComparisonControls({ comparison }) {
                     <ArrowDown size={12} />
                   </button>
                 </Tooltip>
-                <Tooltip content="Remove from comparison" accentColor={accent}>
+                <Tooltip content={t('comparison.removeFromComparison')} accentColor={accent}>
                   <button
                     onClick={() => removeSlot(slotIndex)}
                     className="p-1 rounded transition-all hover:scale-110 active:scale-90"
@@ -426,8 +429,8 @@ export default function ComparisonControls({ comparison }) {
 
         <Tooltip
           content={canAddSlot
-            ? 'Add a chart to this comparison'
-            : (baseline ? 'No more charts compatible with the baseline' : 'No charts available')}
+            ? t('comparison.addChartTooltip')
+            : (baseline ? t('comparison.noCompatible') : t('comparison.noChartsAvailable'))}
           accentColor={accent}
         >
           <button
@@ -441,7 +444,7 @@ export default function ComparisonControls({ comparison }) {
             }}
           >
             <Plus size={12} />
-            Add chart
+            {t('comparison.addChart')}
           </button>
         </Tooltip>
       </div>

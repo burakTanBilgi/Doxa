@@ -1,0 +1,295 @@
+{
+  "common": {
+    "loading": "Loading…",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "close": "Close",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "add": "Add",
+    "untitledProject": "Untitled Project",
+    "editTitle": "Click to edit title",
+    "editDescription": "Click to edit description",
+    "descriptionPlaceholder": "Description...",
+    "addDescription": "Add a description"
+  },
+  "errors": {
+    "exportPngFailed": "Failed to export PNG. Please try again.",
+    "exportSvgFailed": "Failed to export SVG. Please try again.",
+    "importFailed": "Failed to import: {{message}}"
+  },
+  "auth": {
+    "tagline": "Sign in to sync your projects",
+    "email": "Email",
+    "password": "Password",
+    "working": "Working…",
+    "signIn": "Sign in",
+    "createAccount": "Create account",
+    "credentialsRequired": "Email and password are required.",
+    "confirmEmail": "Check your inbox to confirm your email.",
+    "toSignup": "Don't have an account? Create one",
+    "toSignin": "Already have an account? Sign in",
+    "signedInAs": "Signed in as",
+    "signedInFallback": "Signed in",
+    "signOut": "Sign out",
+    "userMenuTooltip": "Signed in as {{label}} — click to sign out"
+  },
+  "nav": {
+    "projectTitlePlaceholder": "Project title",
+    "tabControl": "Control",
+    "tabView": "View",
+    "cloudSyncOff": "Cloud sync off",
+    "cloudSyncOffTooltip": "VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY missing — set them in your env (and on Netlify) to enable cloud sync.",
+    "openProjects": "Open projects",
+    "projects": "Projects",
+    "signIn": "Sign in",
+    "signInTooltip": "Sign in to sync your projects to the cloud across devices",
+    "localSave": "Local",
+    "localSaveTooltip": "Saved in this browser. Sign in to sync across devices.",
+    "syncFailed": "Cloud sync failed",
+    "retry": "Retry",
+    "dismiss": "Dismiss",
+    "language": "Language",
+    "sync": {
+      "saving": "Saving…",
+      "savingTooltip": "Saving to Supabase",
+      "saved": "Saved",
+      "savedTooltip": "All changes synced",
+      "error": "Sync error",
+      "errorTooltip": "Sync failed — see browser console for details",
+      "offline": "Local only",
+      "offlineTooltip": "No Supabase credentials configured",
+      "synced": "Synced",
+      "syncedTooltip": "Connected"
+    }
+  },
+  "controls": {
+    "panelTitle": "Control Panel",
+    "scrollSyncOn": "Scroll sync ON (click to unlock)",
+    "scrollSyncOff": "Scroll sync OFF (click to lock)",
+    "importJson": "Import JSON",
+    "export": "Export",
+    "exportPng": "PNG Image",
+    "exportSvg": "SVG Image",
+    "exportJsonData": "JSON Data",
+    "exportMarkdown": "Markdown",
+    "importPrompt_one": "Import {{count}} chart from \"{{title}}\"?",
+    "importPrompt_other": "Import {{count}} charts from \"{{title}}\"?",
+    "importReplace": "Replace All",
+    "importAppend": "Append",
+    "addComparison": "Add Comparison",
+    "createComparison": "Create a new comparison",
+    "addChart": "Add New Chart",
+    "dragToReorder": "Drag to reorder",
+    "sortLocked": "Sort mode active — switch to Custom to reorder manually",
+    "editTraitName": "Click to edit trait name",
+    "removeTrait": "Remove trait",
+    "traitDescriptionPlaceholder": "Describe this trait...",
+    "changeChartColor": "Change chart color",
+    "editChartTitle": "Click to edit chart title",
+    "duplicateChart": "Duplicate chart",
+    "deleteChart": "Delete chart",
+    "newTraitPlaceholder": "New trait name...",
+    "sortTraits": "Sort traits",
+    "sortColon": "Sort: {{mode}}"
+  },
+  "chart": {
+    "untitledAnalysis": "Untitled Analysis",
+    "viewPanel": "View Panel",
+    "emptyTitle": "No charts yet.",
+    "emptyHint": "Add a chart from the control panel to get started.",
+    "editChartTitle": "Click to edit chart title",
+    "fieldNamePlaceholder": "Field name...",
+    "value": "Value"
+  },
+  "comparison": {
+    "changeColor": "Change comparison color",
+    "editTitle": "Click to edit comparison title",
+    "renameTooltip": "Click to rename comparison",
+    "emptyHint": "Add at least 2 charts with matching trait names to see the comparison.",
+    "traitHeader": "Trait",
+    "duplicate": "Duplicate comparison",
+    "delete": "Delete comparison",
+    "noChartsYet": "No charts added yet. Click \"+ Add chart\" below.",
+    "slotSortLocked": "Slot sort mode active — switch to Custom to reorder manually",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "removeFromComparison": "Remove from comparison",
+    "addChartTooltip": "Add a chart to this comparison",
+    "noCompatible": "No more charts compatible with the baseline",
+    "noChartsAvailable": "No charts available",
+    "addChart": "Add chart",
+    "defaultName": "Comparison"
+  },
+  "slot": {
+    "noShared": "No other charts share these trait names",
+    "baseline": "Baseline (defines compatibility)",
+    "compatible": "Compatible chart",
+    "available": "Available",
+    "inComparison": "In this comparison",
+    "alreadyInComparison": "Already in this comparison"
+  },
+  "stats": {
+    "aggregateStats": "Aggregate stats",
+    "deltaColumn": "Δ column",
+    "showDeltaColumn": "Show Δ column",
+    "addColumns": "Add columns (per trait, across charts)",
+    "addRows": "Add rows (per chart, across traits)",
+    "mean": "Mean",
+    "min": "Min",
+    "max": "Max",
+    "sum": "Sum",
+    "median": "Median",
+    "range": "Range"
+  },
+  "sort": {
+    "title": "Sort",
+    "slotSection": "Chart slots",
+    "rowSection": "Trait rows",
+    "chart": {
+      "custom": "Custom (drag order)",
+      "valueAsc": "Value ascending",
+      "valueDesc": "Value descending",
+      "nameAsc": "Name A–Z",
+      "nameDesc": "Name Z–A"
+    },
+    "slot": {
+      "custom": "Custom (manual order)",
+      "titleAsc": "Title A–Z",
+      "titleDesc": "Title Z–A"
+    },
+    "row": {
+      "custom": "Custom (baseline order)",
+      "nameAsc": "Trait A–Z",
+      "nameDesc": "Trait Z–A",
+      "valueAsc": "Baseline value ascending",
+      "valueDesc": "Baseline value descending",
+      "deltaAsc": "Δ ascending",
+      "deltaDesc": "Δ descending"
+    }
+  },
+  "color": {
+    "custom": "Custom...",
+    "pickColor": "Pick color {{hex}}"
+  },
+  "projects": {
+    "title": "Projects",
+    "yourProjects": "Your Projects",
+    "templates": "Templates",
+    "copyId": "Copy ID",
+    "copied": "Copied!",
+    "rename": "Rename",
+    "editedAgo": "edited {{time}}",
+    "emptyTitle": "No projects yet.",
+    "emptyHint": "Create a blank project or start from a template.",
+    "previewEmpty": "Empty",
+    "chartCount_one": "{{count}} chart",
+    "chartCount_other": "{{count}} charts",
+    "footerProjects": "Click a project to open it. Hover for actions.",
+    "footerTemplates": "Click a template to create a new project from it.",
+    "newBlank": "New blank project",
+    "timeAgo": {
+      "seconds": "{{n}}s ago",
+      "minutes": "{{n}}m ago",
+      "hours": "{{n}}h ago",
+      "days": "{{n}}d ago"
+    }
+  },
+  "templates": {
+    "character-profile": {
+      "name": "Character Profile",
+      "description": "Three-layer character analysis: traits, social dynamics, and a flavour wildcard.",
+      "c1": {
+        "title": "Core Layer: Big Five",
+        "t1": "Openness",
+        "t2": "Conscientiousness",
+        "t3": "Extraversion",
+        "t4": "Agreeableness",
+        "t5": "Neuroticism"
+      },
+      "c2": {
+        "title": "Presentation Layer: Social Dynamics",
+        "t1": "Chaos Potential",
+        "t2": "Manipulation",
+        "t3": "Secrecy",
+        "t4": "Empathy",
+        "t5": "Ego/Confidence"
+      },
+      "c3": {
+        "title": "Ayran",
+        "t1": "Tat Dengesi",
+        "t2": "Doku",
+        "t3": "Ortama Uygunluk",
+        "t4": "İçim Kolaylığı",
+        "t5": "After Taste"
+      }
+    },
+    "product-review": {
+      "name": "Product Review",
+      "description": "Score a product across build quality, value, ergonomics, and longevity.",
+      "c1": {
+        "title": "Overall Assessment",
+        "t1": "Build Quality",
+        "t2": "Value for Money",
+        "t3": "Ergonomics",
+        "t4": "Longevity",
+        "t5": "Wow Factor"
+      }
+    },
+    "team-skills": {
+      "name": "Team Skills Audit",
+      "description": "Two charts for comparing where a teammate stands today vs. where they want to be.",
+      "c1": {
+        "title": "Current Skill Level",
+        "t1": "Engineering",
+        "t2": "Product Sense",
+        "t3": "Communication",
+        "t4": "Leadership",
+        "t5": "Domain Knowledge"
+      },
+      "c2": {
+        "title": "Target Skill Level"
+      }
+    },
+    "two-axis": {
+      "name": "Two-Axis Plot",
+      "description": "Minimal scatter template — two traits render as a 2D plot instead of a radar.",
+      "c1": {
+        "title": "Effort vs Impact",
+        "t1": "Effort",
+        "t2": "Impact"
+      }
+    },
+    "dnd-character": {
+      "name": "D&D Character Build",
+      "description": "Six classic ability scores plotted as a radar — a familiar shape for tabletop builds.",
+      "c1": {
+        "title": "Ability Scores",
+        "t1": "STR",
+        "t2": "DEX",
+        "t3": "CON",
+        "t4": "INT",
+        "t5": "WIS",
+        "t6": "CHA"
+      }
+    },
+    "hero-villain": {
+      "name": "Hero vs Villain",
+      "description": "Two trait-compatible charts plus a pre-configured comparison so you can see the comparison feature head-to-head.",
+      "c1": {
+        "title": "Hero",
+        "t1": "Courage",
+        "t2": "Empathy",
+        "t3": "Wisdom",
+        "t4": "Strength",
+        "t5": "Cunning"
+      },
+      "c2": {
+        "title": "Villain"
+      },
+      "cmp1": {
+        "title": "Showdown"
+      }
+    }
+  }
+}

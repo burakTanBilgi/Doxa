@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
@@ -13,6 +14,7 @@ import Tooltip from './Tooltip';
 const DEFAULT_ACCENT = '#c73a3a';
 
 export default function ChartComparison({ comparison }) {
+  const { t } = useTranslation();
   const { charts, updateComparisonTitle } = useCharts();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(comparison.title);
@@ -50,7 +52,7 @@ export default function ChartComparison({ comparison }) {
             autoFocus
           />
         ) : (
-          <Tooltip content="Click to rename comparison" accentColor={accent}>
+          <Tooltip content={t('comparison.renameTooltip')} accentColor={accent}>
             <h3
               className="text-sm font-semibold uppercase tracking-wider cursor-pointer hover:scale-[1.02] transition-transform"
               style={{ color: accent }}
@@ -72,7 +74,7 @@ export default function ChartComparison({ comparison }) {
 
       {!view ? (
         <p className="text-sm text-center py-6" style={{ color: '#888888' }}>
-          Add at least 2 charts with matching trait names to see the comparison.
+          {t('comparison.emptyHint')}
         </p>
       ) : (
         <>
@@ -179,6 +181,7 @@ function ScatterOverlay({ view }) {
 }
 
 function DeltaTable({ view, aggregateColumns = [], aggregateRows = [] }) {
+  const { t } = useTranslation();
   const showDelta = view.deltaPair != null;
   const aId = view.deltaPair?.a;
   const bId = view.deltaPair?.b;
@@ -199,7 +202,7 @@ function DeltaTable({ view, aggregateColumns = [], aggregateRows = [] }) {
     <table className="w-full mt-4 text-xs" style={{ color: '#d0d0d0', borderCollapse: 'collapse' }}>
       <thead>
         <tr style={{ borderBottom: '1px solid #3d3d3d' }}>
-          <th className="text-left py-2 px-2" style={{ color: '#888888', fontWeight: 600 }}>Trait</th>
+          <th className="text-left py-2 px-2" style={{ color: '#888888', fontWeight: 600 }}>{t('comparison.traitHeader')}</th>
           {view.series.map(s => (
             <th key={s.chartId} className="text-right py-2 px-2" style={{ color: s.color, fontWeight: 600 }}>
               {s.title}
@@ -207,7 +210,7 @@ function DeltaTable({ view, aggregateColumns = [], aggregateRows = [] }) {
           ))}
           {colAggs.map(agg => (
             <th key={agg.key} className="text-right py-2 px-2 italic" style={{ color: '#888888', fontWeight: 600 }}>
-              {agg.label}
+              {t(`stats.${agg.key}`)}
             </th>
           ))}
           {showDelta && (
@@ -259,7 +262,7 @@ function DeltaTable({ view, aggregateColumns = [], aggregateRows = [] }) {
             : [];
           return (
             <tr key={`agg-row-${agg.key}`} style={{ borderTop: '1px solid #3d3d3d', backgroundColor: '#252525' }}>
-              <td className="py-1.5 px-2 italic" style={{ color: '#888888', fontWeight: 600 }}>{agg.label}</td>
+              <td className="py-1.5 px-2 italic" style={{ color: '#888888', fontWeight: 600 }}>{t(`stats.${agg.key}`)}</td>
               {view.series.map((s, i) => (
                 <td key={s.chartId} className="text-right py-1.5 px-2 tabular-nums italic" style={{ color: '#a0a0a0' }}>
                   {formatAggregate(agg.compute(colValues(i)))}

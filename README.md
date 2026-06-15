@@ -92,6 +92,10 @@ npm run build
 5. **Export** - Click the export button (↑) to choose PNG, SVG, JSON, or Markdown
 6. **Import** - Click the import button (↓) to load a saved `.json` profile
 7. **Mobile** - On small screens, use the Control/View tabs to switch panels
+8. **Language** - English & Turkish, auto-detected; switch any time from the navbar
+
+For a full walkthrough see [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md). To add or
+edit a translation, see [`docs/TRANSLATIONS.md`](docs/TRANSLATIONS.md).
 
 ## License
 

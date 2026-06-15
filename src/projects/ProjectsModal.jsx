@@ -1,28 +1,29 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import {
   X, Plus, Trash2, Pencil, Copy, Check,
   FileBox, Sparkles,
 } from 'lucide-react';
 import { useProjects } from './ProjectsContext';
-import { TEMPLATES } from './templates';
+import { TEMPLATES, localizeTemplatePayload } from './templates';
 import { cloudLoadProject } from './cloud-storage';
 import Tooltip from '../components/Tooltip';
 
 const ACCENT = '#c73a3a';
 
-function timeAgo(iso) {
+function timeAgo(iso, t) {
   if (!iso) return '';
   const then = new Date(iso).getTime();
   const diff = Math.max(0, Date.now() - then);
   const sec = Math.floor(diff / 1000);
-  if (sec < 60) return `${sec}s ago`;
+  if (sec < 60) return t('projects.timeAgo.seconds', { n: sec });
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m ago`;
+  if (min < 60) return t('projects.timeAgo.minutes', { n: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
+  if (hr < 24) return t('projects.timeAgo.hours', { n: hr });
   const day = Math.floor(hr / 24);
-  return `${day}d ago`;
+  return t('projects.timeAgo.days', { n: day });
 }
 
 // ---- Mini chart preview (SVG, no recharts) ---------------------------------
@@ -268,6 +269,7 @@ function PreviewScroller({ items }) {
 }
 
 function PreviewArea({ payload, loading }) {
+  const { t } = useTranslation();
   // A missing preview entry (undefined) is treated as still loading so the
   // card doesn't flash an "Empty" state during the lazy fetch.
   const items = useMemo(() => {
@@ -298,7 +300,7 @@ function PreviewArea({ payload, loading }) {
   if (items.length === 0) {
     return (
       <div className="h-[72px] flex items-center justify-center" style={{ color: '#555555' }}>
-        <span className="text-[10px] uppercase tracking-wider">Empty</span>
+        <span className="text-[10px] uppercase tracking-wider">{t('projects.previewEmpty')}</span>
       </div>
     );
   }
@@ -313,6 +315,7 @@ function ProjectCard({
   onOpen, onStartRename, onStartConfirmDelete, onCopyId,
   copied,
 }) {
+  const { t } = useTranslation();
   const interactive = !isRenaming && !isConfirmingDelete;
   return (
     <div
@@ -350,11 +353,11 @@ function ProjectCard({
           />
         ) : (
           <p className="text-sm font-medium truncate" style={{ color: '#d0d0d0' }}>
-            {project.title || 'Untitled Project'}
+            {project.title || t('common.untitledProject')}
           </p>
         )}
         <p className="text-[10px] flex items-center gap-2 truncate" style={{ color: '#666666' }}>
-          <span>edited {timeAgo(project.updated_at)}</span>
+          <span>{t('projects.editedAgo', { time: timeAgo(project.updated_at, t) })}</span>
           <span className="font-mono opacity-70">{String(project.id).slice(0, 8)}</span>
         </p>
       </div>
@@ -367,7 +370,7 @@ function ProjectCard({
             className="text-[10px] uppercase tracking-wider px-2 py-1 rounded font-semibold"
             style={{ backgroundColor: ACCENT, color: '#ffffff' }}
           >
-            Delete
+            {t('common.delete')}
           </button>
           <button
             type="button"
@@ -375,7 +378,7 @@ function ProjectCard({
             className="text-[10px] uppercase tracking-wider px-2 py-1 rounded"
             style={{ color: '#888888' }}
           >
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
       )}
@@ -385,7 +388,7 @@ function ProjectCard({
           className="absolute top-2 right-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
           onClick={(e) => e.stopPropagation()}
         >
-          <Tooltip content={copied ? 'Copied!' : 'Copy ID'} accentColor={ACCENT}>
+          <Tooltip content={copied ? t('projects.copied') : t('projects.copyId')} accentColor={ACCENT}>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onCopyId(project.id); }}
@@ -395,7 +398,7 @@ function ProjectCard({
               {copied ? <Check size={12} /> : <Copy size={12} />}
             </button>
           </Tooltip>
-          <Tooltip content="Rename" accentColor={ACCENT}>
+          <Tooltip content={t('projects.rename')} accentColor={ACCENT}>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onStartRename(project); }}
@@ -405,7 +408,7 @@ function ProjectCard({
               <Pencil size={12} />
             </button>
           </Tooltip>
-          <Tooltip content="Delete" accentColor={ACCENT}>
+          <Tooltip content={t('common.delete')} accentColor={ACCENT}>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onStartConfirmDelete(project.id); }}
@@ -422,7 +425,11 @@ function ProjectCard({
 }
 
 function TemplateCard({ template, onUse }) {
+  const { t } = useTranslation();
   const chartCount = template.payload.charts.length;
+  // Resolve the template's i18n keys to text in the active language so the
+  // mini-preview renders real chart/trait names, not raw keys.
+  const localizedPayload = useMemo(() => localizeTemplatePayload(template, t), [template, t]);
   return (
     <div
       className="group rounded-xl flex flex-col overflow-hidden cursor-pointer transition-all duration-150 hover:-translate-y-0.5"
@@ -436,13 +443,13 @@ function TemplateCard({ template, onUse }) {
         className="px-3 pt-3 pb-1 border-b"
         style={{ borderColor: '#2d2d2d', backgroundColor: '#161616' }}
       >
-        <PreviewArea payload={template.payload} loading={false} />
+        <PreviewArea payload={localizedPayload} loading={false} />
       </div>
       <div className="px-3 py-2 flex flex-col gap-0.5 min-w-0">
         <div className="flex items-center gap-1.5">
           <Sparkles size={11} style={{ color: ACCENT, flexShrink: 0 }} />
           <p className="text-sm font-medium truncate" style={{ color: '#d0d0d0' }}>
-            {template.name}
+            {t(template.name)}
           </p>
         </div>
         <p
@@ -455,10 +462,10 @@ function TemplateCard({ template, onUse }) {
             overflow: 'hidden',
           }}
         >
-          {template.description}
+          {t(template.description)}
         </p>
         <p className="text-[9px] uppercase tracking-wider mt-1" style={{ color: '#555555' }}>
-          {chartCount} {chartCount === 1 ? 'chart' : 'charts'}
+          {t('projects.chartCount', { count: chartCount })}
         </p>
       </div>
     </div>
@@ -467,6 +474,7 @@ function TemplateCard({ template, onUse }) {
 
 // ---- Modal ------------------------------------------------------------------
 export default function ProjectsModal() {
+  const { t } = useTranslation();
   const {
     modalOpen, closeModal, projectList, activeId,
     openProject, newProject, newProjectFromTemplate,
@@ -588,7 +596,7 @@ export default function ProjectsModal() {
         >
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: ACCENT }}>
-              Projects
+              {t('projects.title')}
             </h2>
             <div className="flex items-center gap-1 ml-3">
               <button
@@ -602,7 +610,7 @@ export default function ProjectsModal() {
                 }}
               >
                 <FileBox size={12} />
-                Your Projects
+                {t('projects.yourProjects')}
                 <span
                   className="ml-1 px-1.5 rounded-full text-[9px]"
                   style={{ backgroundColor: '#2d2d2d', color: '#888888' }}
@@ -621,7 +629,7 @@ export default function ProjectsModal() {
                 }}
               >
                 <Sparkles size={12} />
-                Templates
+                {t('projects.templates')}
                 <span
                   className="ml-1 px-1.5 rounded-full text-[9px]"
                   style={{ backgroundColor: '#2d2d2d', color: '#888888' }}
@@ -631,7 +639,7 @@ export default function ProjectsModal() {
               </button>
             </div>
           </div>
-          <Tooltip content="Close" accentColor={ACCENT}>
+          <Tooltip content={t('common.close')} accentColor={ACCENT}>
             <button
               type="button"
               onClick={closeModal}
@@ -647,9 +655,9 @@ export default function ProjectsModal() {
           {tab === 'projects' ? (
             projectList.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 gap-2">
-                <p className="text-sm" style={{ color: '#888888' }}>No projects yet.</p>
+                <p className="text-sm" style={{ color: '#888888' }}>{t('projects.emptyTitle')}</p>
                 <p className="text-xs" style={{ color: '#666666' }}>
-                  Create a blank project or start from a template.
+                  {t('projects.emptyHint')}
                 </p>
               </div>
             ) : (
@@ -696,8 +704,8 @@ export default function ProjectsModal() {
         >
           <p className="text-[10px]" style={{ color: '#666666' }}>
             {tab === 'projects'
-              ? 'Click a project to open it. Hover for actions.'
-              : 'Click a template to create a new project from it.'}
+              ? t('projects.footerProjects')
+              : t('projects.footerTemplates')}
           </p>
           <button
             type="button"
@@ -706,7 +714,7 @@ export default function ProjectsModal() {
             style={{ backgroundColor: ACCENT, color: '#ffffff' }}
           >
             <Plus size={13} />
-            New blank project
+            {t('projects.newBlank')}
           </button>
         </div>
       </div>

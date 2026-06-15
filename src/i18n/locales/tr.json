@@ -1,0 +1,295 @@
+{
+  "common": {
+    "loading": "Yükleniyor…",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "close": "Kapat",
+    "collapse": "Daralt",
+    "expand": "Genişlet",
+    "add": "Ekle",
+    "untitledProject": "Adsız Proje",
+    "editTitle": "Başlığı düzenlemek için tıklayın",
+    "editDescription": "Açıklamayı düzenlemek için tıklayın",
+    "descriptionPlaceholder": "Açıklama...",
+    "addDescription": "Açıklama ekle"
+  },
+  "errors": {
+    "exportPngFailed": "PNG dışa aktarılamadı. Lütfen tekrar deneyin.",
+    "exportSvgFailed": "SVG dışa aktarılamadı. Lütfen tekrar deneyin.",
+    "importFailed": "İçe aktarılamadı: {{message}}"
+  },
+  "auth": {
+    "tagline": "Projelerinizi senkronize etmek için giriş yapın",
+    "email": "E-posta",
+    "password": "Parola",
+    "working": "İşleniyor…",
+    "signIn": "Giriş yap",
+    "createAccount": "Hesap oluştur",
+    "credentialsRequired": "E-posta ve parola gereklidir.",
+    "confirmEmail": "E-postanızı onaylamak için gelen kutunuzu kontrol edin.",
+    "toSignup": "Hesabınız yok mu? Bir tane oluşturun",
+    "toSignin": "Zaten hesabınız var mı? Giriş yapın",
+    "signedInAs": "Giriş yapan",
+    "signedInFallback": "Giriş yapıldı",
+    "signOut": "Çıkış yap",
+    "userMenuTooltip": "{{label}} olarak giriş yapıldı — çıkmak için tıklayın"
+  },
+  "nav": {
+    "projectTitlePlaceholder": "Proje başlığı",
+    "tabControl": "Kontrol",
+    "tabView": "Görünüm",
+    "cloudSyncOff": "Bulut senkr. kapalı",
+    "cloudSyncOffTooltip": "VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY eksik — bulut senkronizasyonunu etkinleştirmek için bunları ortamınızda (ve Netlify'da) ayarlayın.",
+    "openProjects": "Projeleri aç",
+    "projects": "Projeler",
+    "signIn": "Giriş yap",
+    "signInTooltip": "Projelerini cihazlar arasında buluta eşitlemek için giriş yap",
+    "localSave": "Yerel",
+    "localSaveTooltip": "Bu tarayıcıya kaydedildi. Cihazlar arasında eşitlemek için giriş yap.",
+    "syncFailed": "Bulut senkronizasyonu başarısız",
+    "retry": "Tekrar dene",
+    "dismiss": "Kapat",
+    "language": "Dil",
+    "sync": {
+      "saving": "Kaydediliyor…",
+      "savingTooltip": "Supabase'e kaydediliyor",
+      "saved": "Kaydedildi",
+      "savedTooltip": "Tüm değişiklikler senkronize edildi",
+      "error": "Senkronizasyon hatası",
+      "errorTooltip": "Senkronizasyon başarısız — ayrıntılar için tarayıcı konsoluna bakın",
+      "offline": "Yalnızca yerel",
+      "offlineTooltip": "Supabase kimlik bilgisi yapılandırılmamış",
+      "synced": "Senkronize",
+      "syncedTooltip": "Bağlandı"
+    }
+  },
+  "controls": {
+    "panelTitle": "Kontrol Paneli",
+    "scrollSyncOn": "Kaydırma senkr. AÇIK (kilidi açmak için tıklayın)",
+    "scrollSyncOff": "Kaydırma senkr. KAPALI (kilitlemek için tıklayın)",
+    "importJson": "JSON içe aktar",
+    "export": "Dışa aktar",
+    "exportPng": "PNG Görüntü",
+    "exportSvg": "SVG Görüntü",
+    "exportJsonData": "JSON Veri",
+    "exportMarkdown": "Markdown",
+    "importPrompt_one": "\"{{title}}\" projesinden {{count}} grafik içe aktarılsın mı?",
+    "importPrompt_other": "\"{{title}}\" projesinden {{count}} grafik içe aktarılsın mı?",
+    "importReplace": "Tümünü Değiştir",
+    "importAppend": "Ekle",
+    "addComparison": "Karşılaştırma Ekle",
+    "createComparison": "Yeni bir karşılaştırma oluştur",
+    "addChart": "Yeni Grafik Ekle",
+    "dragToReorder": "Yeniden sıralamak için sürükleyin",
+    "sortLocked": "Sıralama modu etkin — manuel sıralamak için Özel'e geçin",
+    "editTraitName": "Özellik adını düzenlemek için tıklayın",
+    "removeTrait": "Özelliği kaldır",
+    "traitDescriptionPlaceholder": "Bu özelliği açıklayın...",
+    "changeChartColor": "Grafik rengini değiştir",
+    "editChartTitle": "Grafik başlığını düzenlemek için tıklayın",
+    "duplicateChart": "Grafiği çoğalt",
+    "deleteChart": "Grafiği sil",
+    "newTraitPlaceholder": "Yeni özellik adı...",
+    "sortTraits": "Özellikleri sırala",
+    "sortColon": "Sırala: {{mode}}"
+  },
+  "chart": {
+    "untitledAnalysis": "Adsız Analiz",
+    "viewPanel": "Görünüm Paneli",
+    "emptyTitle": "Henüz grafik yok.",
+    "emptyHint": "Başlamak için kontrol panelinden bir grafik ekleyin.",
+    "editChartTitle": "Grafik başlığını düzenlemek için tıklayın",
+    "fieldNamePlaceholder": "Alan adı...",
+    "value": "Değer"
+  },
+  "comparison": {
+    "changeColor": "Karşılaştırma rengini değiştir",
+    "editTitle": "Karşılaştırma başlığını düzenlemek için tıklayın",
+    "renameTooltip": "Karşılaştırmayı yeniden adlandırmak için tıklayın",
+    "emptyHint": "Karşılaştırmayı görmek için eşleşen özellik adlarına sahip en az 2 grafik ekleyin.",
+    "traitHeader": "Özellik",
+    "duplicate": "Karşılaştırmayı çoğalt",
+    "delete": "Karşılaştırmayı sil",
+    "noChartsYet": "Henüz grafik eklenmedi. Aşağıdan \"+ Grafik ekle\"ye tıklayın.",
+    "slotSortLocked": "Yuva sıralama modu etkin — manuel sıralamak için Özel'e geçin",
+    "moveUp": "Yukarı taşı",
+    "moveDown": "Aşağı taşı",
+    "removeFromComparison": "Karşılaştırmadan kaldır",
+    "addChartTooltip": "Bu karşılaştırmaya bir grafik ekle",
+    "noCompatible": "Temel ile uyumlu başka grafik yok",
+    "noChartsAvailable": "Kullanılabilir grafik yok",
+    "addChart": "Grafik ekle",
+    "defaultName": "Karşılaştırma"
+  },
+  "slot": {
+    "noShared": "Başka hiçbir grafik bu özellik adlarını paylaşmıyor",
+    "baseline": "Temel (uyumluluğu tanımlar)",
+    "compatible": "Uyumlu grafik",
+    "available": "Kullanılabilir",
+    "inComparison": "Bu karşılaştırmada",
+    "alreadyInComparison": "Zaten bu karşılaştırmada"
+  },
+  "stats": {
+    "aggregateStats": "Toplu istatistikler",
+    "deltaColumn": "Δ sütunu",
+    "showDeltaColumn": "Δ sütununu göster",
+    "addColumns": "Sütun ekle (özellik başına, grafikler arası)",
+    "addRows": "Satır ekle (grafik başına, özellikler arası)",
+    "mean": "Ortalama",
+    "min": "En düşük",
+    "max": "En yüksek",
+    "sum": "Toplam",
+    "median": "Medyan",
+    "range": "Aralık"
+  },
+  "sort": {
+    "title": "Sırala",
+    "slotSection": "Grafik yuvaları",
+    "rowSection": "Özellik satırları",
+    "chart": {
+      "custom": "Özel (sürükleme sırası)",
+      "valueAsc": "Değere göre artan",
+      "valueDesc": "Değere göre azalan",
+      "nameAsc": "Ada göre A–Z",
+      "nameDesc": "Ada göre Z–A"
+    },
+    "slot": {
+      "custom": "Özel (manuel sıra)",
+      "titleAsc": "Başlığa göre A–Z",
+      "titleDesc": "Başlığa göre Z–A"
+    },
+    "row": {
+      "custom": "Özel (temel sırası)",
+      "nameAsc": "Özellik A–Z",
+      "nameDesc": "Özellik Z–A",
+      "valueAsc": "Temel değere göre artan",
+      "valueDesc": "Temel değere göre azalan",
+      "deltaAsc": "Δ artan",
+      "deltaDesc": "Δ azalan"
+    }
+  },
+  "color": {
+    "custom": "Özel...",
+    "pickColor": "{{hex}} rengini seç"
+  },
+  "projects": {
+    "title": "Projeler",
+    "yourProjects": "Projeleriniz",
+    "templates": "Şablonlar",
+    "copyId": "Kimliği kopyala",
+    "copied": "Kopyalandı!",
+    "rename": "Yeniden adlandır",
+    "editedAgo": "{{time}} düzenlendi",
+    "emptyTitle": "Henüz proje yok.",
+    "emptyHint": "Boş bir proje oluşturun veya bir şablonla başlayın.",
+    "previewEmpty": "Boş",
+    "chartCount_one": "{{count}} grafik",
+    "chartCount_other": "{{count}} grafik",
+    "footerProjects": "Açmak için bir projeye tıklayın. İşlemler için üzerine gelin.",
+    "footerTemplates": "Ondan yeni bir proje oluşturmak için bir şablona tıklayın.",
+    "newBlank": "Yeni boş proje",
+    "timeAgo": {
+      "seconds": "{{n}} sn önce",
+      "minutes": "{{n}} dk önce",
+      "hours": "{{n}} sa önce",
+      "days": "{{n}} gün önce"
+    }
+  },
+  "templates": {
+    "character-profile": {
+      "name": "Karakter Profili",
+      "description": "Üç katmanlı karakter analizi: özellikler, sosyal dinamikler ve bir lezzet jokeri.",
+      "c1": {
+        "title": "Çekirdek Katman: Beş Faktör",
+        "t1": "Açıklık",
+        "t2": "Sorumluluk",
+        "t3": "Dışadönüklük",
+        "t4": "Uyumluluk",
+        "t5": "Nevrotiklik"
+      },
+      "c2": {
+        "title": "Sunum Katmanı: Sosyal Dinamikler",
+        "t1": "Kaos Potansiyeli",
+        "t2": "Manipülasyon",
+        "t3": "Gizlilik",
+        "t4": "Empati",
+        "t5": "Ego/Özgüven"
+      },
+      "c3": {
+        "title": "Ayran",
+        "t1": "Tat Dengesi",
+        "t2": "Doku",
+        "t3": "Ortama Uygunluk",
+        "t4": "İçim Kolaylığı",
+        "t5": "After Taste"
+      }
+    },
+    "product-review": {
+      "name": "Ürün İncelemesi",
+      "description": "Bir ürünü yapım kalitesi, değer, ergonomi ve dayanıklılık açısından puanlayın.",
+      "c1": {
+        "title": "Genel Değerlendirme",
+        "t1": "Yapım Kalitesi",
+        "t2": "Fiyat/Performans",
+        "t3": "Ergonomi",
+        "t4": "Dayanıklılık",
+        "t5": "Etkileyicilik"
+      }
+    },
+    "team-skills": {
+      "name": "Ekip Beceri Denetimi",
+      "description": "Bir ekip üyesinin bugün nerede olduğunu ve nerede olmak istediğini karşılaştırmak için iki grafik.",
+      "c1": {
+        "title": "Mevcut Beceri Seviyesi",
+        "t1": "Mühendislik",
+        "t2": "Ürün Sezgisi",
+        "t3": "İletişim",
+        "t4": "Liderlik",
+        "t5": "Alan Bilgisi"
+      },
+      "c2": {
+        "title": "Hedef Beceri Seviyesi"
+      }
+    },
+    "two-axis": {
+      "name": "İki Eksenli Grafik",
+      "description": "Minimal dağılım şablonu — iki özellik radar yerine 2B grafik olarak görüntülenir.",
+      "c1": {
+        "title": "Çaba ve Etki",
+        "t1": "Çaba",
+        "t2": "Etki"
+      }
+    },
+    "dnd-character": {
+      "name": "D&D Karakter Yapısı",
+      "description": "Radar olarak çizilen altı klasik yetenek puanı — masaüstü oyun karakterleri için tanıdık bir biçim.",
+      "c1": {
+        "title": "Yetenek Puanları",
+        "t1": "STR",
+        "t2": "DEX",
+        "t3": "CON",
+        "t4": "INT",
+        "t5": "WIS",
+        "t6": "CHA"
+      }
+    },
+    "hero-villain": {
+      "name": "Kahraman ve Kötü Adam",
+      "description": "Karşılaştırma özelliğini kafa kafaya görebilmeniz için özellik açısından uyumlu iki grafik ve önceden yapılandırılmış bir karşılaştırma.",
+      "c1": {
+        "title": "Kahraman",
+        "t1": "Cesaret",
+        "t2": "Empati",
+        "t3": "Bilgelik",
+        "t4": "Güç",
+        "t5": "Kurnazlık"
+      },
+      "c2": {
+        "title": "Kötü Adam"
+      },
+      "cmp1": {
+        "title": "Hesaplaşma"
+      }
+    }
+  }
+}

@@ -9,7 +9,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run preview` — preview built bundle.
 - `npm run lint` — ESLint over the whole repo (config in `eslint.config.js`; `no-unused-vars` ignores `^[A-Z_]` so SVG icon imports and constants can stay).
 
-No test runner is configured — there are no unit/integration tests in this project. Verify changes by running `npm run dev` and exercising the UI (desktop + mobile breakpoint, both chart types, drag, import/export).
+- `npm test` — Vitest unit suite (`tests/unit/`, jsdom). `npm run test:watch` for watch mode.
+- `npm run test:smoke` — integration tests in `tests/integration/` that hit a real Supabase project (run manually).
+
+Also verify changes by running `npm run dev` and exercising the UI (desktop + mobile breakpoint, both chart types, drag, import/export, both languages).
 
 Deploys via Netlify (`netlify.toml`): build command `npm run build`, publish dir `dist`.
 
@@ -45,7 +48,15 @@ Constraints encoded in the reducers (not types):
 - `ControlPanel.jsx` — left panel; per-chart editor (title, color, traits with sliders), import/export UI, "Add Chart" button.
 - `VisualizationCanvas.jsx` — right panel grid; renders one `ChartDisplay` per chart; owns chart-level drag-drop reorder.
 - `ChartDisplay.jsx` — picks `RadarChartDisplay` vs `TwoFieldChart` based on `data.length`; inline-editable title and axis labels (click to edit).
-- `utils/exportFormats.js` — `exportAsJson`, `exportAsMarkdown`, `parseImportJson`. PNG/SVG export lives in `App.jsx` and uses `html-to-image` against `canvasRef` (the right panel content).
+- `utils/exportFormats.js` — `exportAsJson`, `exportAsMarkdown`, `parseImportJson`. PNG/SVG export lives in `App.jsx` and uses `html-to-image` against `canvasRef` (the right panel content). `exportAsMarkdown` takes a `t` argument — only its structural vocabulary is translated; user data is not.
+
+### Internationalization (i18n)
+
+`react-i18next`, English + Turkish. Config in `src/i18n/index.js`; locales bundled as `src/i18n/locales/{en,tr}.json` (en is the key-set source of truth). `src/main.jsx` imports `src/i18n` once before render. Components call `useTranslation()` for `t`. Key scheme is `area.key`; full conventions in `docs/TRANSLATIONS.md`.
+
+- **Templates are language-neutral.** `src/projects/templates.js` holds i18n KEY strings, not text. `localizeTemplatePayload(tmpl, t)` deep-clones and resolves keys at pick time, freezing the project's text in the active language. Live UI switches language; **existing projects, `doxa_charts` data, and JSON import/export are never retranslated**.
+- The navbar `LanguageSwitcher` calls `i18n.changeLanguage`. `AuthProvider` best-effort syncs the choice to Supabase `user_metadata.lang` (account language wins over the local detector on sign-in).
+- Adding a string: add the key to **both** locale files — `tests/unit/i18n-parity.test.js` enforces identical key sets.
 
 ### Patterns to preserve
 

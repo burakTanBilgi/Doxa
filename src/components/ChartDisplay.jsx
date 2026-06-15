@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   RadarChart,
   PolarGrid,
@@ -121,6 +122,7 @@ function TwoFieldChart({ chart, onEditField }) {
 }
 
 function RadarChartDisplay({ chart, traitCount, onLabelClick }) {
+  const { t } = useTranslation();
   const outerRadius = traitCount >= 10 ? '45%' : traitCount >= 7 ? '50%' : '65%';
   const fontSize = traitCount >= 10 ? 7 : traitCount >= 7 ? 8 : 10;
   const valueFontSize = traitCount >= 10 ? 6 : traitCount >= 7 ? 7 : 8;
@@ -198,7 +200,7 @@ function RadarChartDisplay({ chart, traitCount, onLabelClick }) {
             borderRadius: '8px',
             color: '#d0d0d0'
           }}
-          formatter={(value) => [`${value}%`, 'Value']}
+          formatter={(value) => [`${value}%`, t('chart.value')]}
         />
       </RadarChart>
     </ResponsiveContainer>
@@ -206,6 +208,7 @@ function RadarChartDisplay({ chart, traitCount, onLabelClick }) {
 }
 
 export default function ChartDisplay({ chart, index = 0 }) {
+  const { t } = useTranslation();
   const { updateChartTitle, updateTraitName } = useCharts();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(chart.title);
@@ -261,7 +264,7 @@ export default function ChartDisplay({ chart, index = 0 }) {
           autoFocus
         />
       ) : (
-        <Tooltip content="Click to edit chart title" accentColor={chart.color}>
+        <Tooltip content={t('chart.editChartTitle')} accentColor={chart.color}>
           <h3
             className="text-base font-semibold text-center transition-all cursor-pointer hover:scale-105"
             style={{ color: '#d0d0d0' }}
@@ -296,7 +299,7 @@ export default function ChartDisplay({ chart, index = 0 }) {
             className="text-sm px-3 py-1.5 rounded-lg bg-transparent border-2 focus:outline-none text-center"
             style={{ color: chart.color, borderColor: chart.color, minWidth: '120px' }}
             autoFocus
-            placeholder="Field name..."
+            placeholder={t('chart.fieldNamePlaceholder')}
           />
         </div>
       )}

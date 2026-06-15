@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { Sigma, Check } from 'lucide-react';
 import { AGGREGATES } from '../utils/aggregates';
 import Tooltip from './Tooltip';
@@ -27,6 +28,7 @@ export default function StatsMenu({
   onToggleColumn,
   onToggleRow,
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, right: 0 });
   const wrapRef = useRef(null);
@@ -88,7 +90,7 @@ export default function StatsMenu({
 
   return (
     <div ref={wrapRef} className="relative">
-      <Tooltip content="Aggregate stats" accentColor={accentColor} disabled={open}>
+      <Tooltip content={t('stats.aggregateStats')} accentColor={accentColor} disabled={open}>
         <button
           onClick={() => setOpen(o => !o)}
           onMouseDown={(e) => e.stopPropagation()}
@@ -117,10 +119,10 @@ export default function StatsMenu({
           {deltaAvailable && (
             <div>
               <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider" style={{ color: '#888888' }}>
-                Δ column
+                {t('stats.deltaColumn')}
               </div>
               {renderCheckRow(
-                'Show Δ column',
+                t('stats.showDeltaColumn'),
                 !!showDelta,
                 () => onShowDeltaChange(!showDelta),
                 false,
@@ -130,10 +132,10 @@ export default function StatsMenu({
           )}
           <div style={{ borderTop: deltaAvailable ? '1px solid #3d3d3d' : 'none' }}>
             <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider" style={{ color: '#888888' }}>
-              Add columns (per trait, across charts)
+              {t('stats.addColumns')}
             </div>
             {AGGREGATES.map(a => renderCheckRow(
-              a.label,
+              t(`stats.${a.key}`),
               columnKeys.includes(a.key),
               () => onToggleColumn(a.key),
               false,
@@ -142,10 +144,10 @@ export default function StatsMenu({
           </div>
           <div style={{ borderTop: '1px solid #3d3d3d' }}>
             <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider" style={{ color: '#888888' }}>
-              Add rows (per chart, across traits)
+              {t('stats.addRows')}
             </div>
             {AGGREGATES.map(a => renderCheckRow(
-              a.label,
+              t(`stats.${a.key}`),
               rowKeys.includes(a.key),
               () => onToggleRow(a.key),
               false,
