@@ -199,7 +199,8 @@ function DeltaTable({ view, aggregateColumns = [], aggregateRows = [] }) {
     .filter(Boolean);
 
   return (
-    <table className="w-full mt-4 text-xs" style={{ color: '#d0d0d0', borderCollapse: 'collapse' }}>
+    <div className="mt-4 overflow-x-auto">
+      <table className="w-full text-xs" style={{ color: '#d0d0d0', borderCollapse: 'collapse' }}>
       <thead>
         <tr style={{ borderBottom: '1px solid #3d3d3d' }}>
           <th className="text-left py-2 px-2" style={{ color: '#888888', fontWeight: 600 }}>{t('comparison.traitHeader')}</th>
@@ -282,6 +283,7 @@ function DeltaTable({ view, aggregateColumns = [], aggregateRows = [] }) {
           );
         })}
       </tbody>
-    </table>
+      </table>
+    </div>
   );
 }

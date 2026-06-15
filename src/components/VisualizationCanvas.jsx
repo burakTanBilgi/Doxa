@@ -365,7 +365,7 @@ const VisualizationCanvas = forwardRef(function VisualizationCanvas({
         )}
       </div>
       {charts.length === 0 && (
-        <div className="text-center py-12" style={{ color: '#888888' }}>
+        <div className="text-center py-12 px-4 max-w-md mx-auto" style={{ color: '#888888' }}>
           <p className="text-lg">{t('chart.emptyTitle')}</p>
           <p className="text-sm mt-2">{t('chart.emptyHint')}</p>
         </div>

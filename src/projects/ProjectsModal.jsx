@@ -591,18 +591,18 @@ export default function ProjectsModal() {
         }}
       >
         <div
-          className="flex items-center justify-between px-5 py-3 border-b"
+          className="flex items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b"
           style={{ borderColor: '#3d3d3d' }}
         >
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: ACCENT }}>
+          <div className="flex items-center gap-2 min-w-0">
+            <h2 className="hidden sm:block text-sm font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: ACCENT }}>
               {t('projects.title')}
             </h2>
-            <div className="flex items-center gap-1 ml-3">
+            <div className="flex items-center gap-1 sm:ml-3 min-w-0 overflow-x-auto hide-scrollbar">
               <button
                 type="button"
                 onClick={() => setTab('projects')}
-                className="px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider transition-colors flex items-center gap-1.5"
+                className="flex-shrink-0 whitespace-nowrap px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider transition-colors flex items-center gap-1.5"
                 style={{
                   backgroundColor: tab === 'projects' ? '#1a1a1a' : 'transparent',
                   color: tab === 'projects' ? '#d0d0d0' : '#888888',
@@ -621,7 +621,7 @@ export default function ProjectsModal() {
               <button
                 type="button"
                 onClick={() => setTab('templates')}
-                className="px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider transition-colors flex items-center gap-1.5"
+                className="flex-shrink-0 whitespace-nowrap px-2.5 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider transition-colors flex items-center gap-1.5"
                 style={{
                   backgroundColor: tab === 'templates' ? '#1a1a1a' : 'transparent',
                   color: tab === 'templates' ? '#d0d0d0' : '#888888',
@@ -643,7 +643,7 @@ export default function ProjectsModal() {
             <button
               type="button"
               onClick={closeModal}
-              className="p-1 rounded-md hover:bg-black/30 transition-colors"
+              className="flex-shrink-0 p-1 rounded-md hover:bg-black/30 transition-colors"
               style={{ color: '#888888' }}
             >
               <X size={16} />
